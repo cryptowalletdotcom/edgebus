@@ -1,4 +1,4 @@
-import { DeliveryApiIdentifier, EgressApiIdentifier, MessageApiIdentifier, TopicApiIdentifier } from "../misc/api-identifier";
+import { DeliveryIdentifier, EgressIdentifier, MessageIdentifier, TopicIdentifier } from "./identifiers";
 
 export namespace Delivery {
 	export const enum Status {
@@ -7,16 +7,16 @@ export namespace Delivery {
 	}
 
 	export interface Id {
-		readonly deliveryId: DeliveryApiIdentifier;
+		readonly deliveryId: DeliveryIdentifier;
 	}
 	export type Data =
 		| Data.Success
 		| Data.Failure;
 	export namespace Data {
 		export interface Base {
-			readonly egressId: EgressApiIdentifier;
-			readonly topicId: TopicApiIdentifier;
-			readonly messageId: MessageApiIdentifier;
+			readonly egressId: EgressIdentifier;
+			readonly topicId: TopicIdentifier;
+			readonly messageId: MessageIdentifier;
 			readonly status: Status;
 		}
 		export interface Success extends Base {

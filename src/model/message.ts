@@ -1,11 +1,11 @@
-import { MessageApiIdentifier } from "../misc/api-identifier";
+import { MessageIdentifier } from "./identifiers";
 
 export namespace Message {
 	export interface Id {
 		/**
 		 * An identifier of the `Message`
 		 */
-		readonly messageId: MessageApiIdentifier;
+		readonly messageId: MessageIdentifier;
 	}
 
 	export type Headers = Readonly<Record<string, string>>;

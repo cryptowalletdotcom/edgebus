@@ -7,7 +7,7 @@ import { createBullBoard } from "@bull-board/api";
 import { BullAdapter } from "@bull-board/api/bullAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 
-import { IngressApiIdentifier, TopicApiIdentifier, EgressApiIdentifier, MessageApiIdentifier } from "../misc/api-identifier";
+import { EgressIdentifier, MessageIdentifier, TopicIdentifier } from "../model";
 import { Message } from "../model/message";
 import { MessageBus } from "./message_bus";
 import { MessageBusBase } from "./message_bus_base";
@@ -50,8 +50,8 @@ export class MessageBusBull extends MessageBusBase {
 		this._redisOpts = Object.freeze(redisOpts);
 
 		this._channels = new Map();
-		this._bullEgressQueues = new Map<EgressApiIdentifier["value"], Queue>();
-		this._bullTopicQueues = new Map<TopicApiIdentifier["value"], TopicQueueItem>();
+		this._bullEgressQueues = new Map<EgressIdentifier["value"], Queue>();
+		this._bullTopicQueues = new Map<TopicIdentifier["value"], TopicQueueItem>();
 
 		this._bullJobOpts = Object.freeze({
 			attempts: 512,
@@ -171,7 +171,7 @@ export class MessageBusBull extends MessageBusBase {
 		});
 		const topicQueueItem: TopicQueueItem = Object.freeze({
 			queue,
-			targetEgressQueues: new Set<[EgressApiIdentifier, Queue]>()
+			targetEgressQueues: new Set<[EgressIdentifier, Queue]>()
 		});
 		this._bullTopicQueues.set(topic.topicId.value, topicQueueItem);
 		this._bullBoardController.addQueue(new BullAdapter(queue));
@@ -209,7 +209,7 @@ export class MessageBusBull extends MessageBusBase {
 		return queue;
 	}
 
-	private getTopicQueueItem(topicId: TopicApiIdentifier): TopicQueueItem {
+	private getTopicQueueItem(topicId: TopicIdentifier): TopicQueueItem {
 		const topicQueueItem: TopicQueueItem | undefined = this._bullTopicQueues.get(topicId.value);
 		if (topicQueueItem === undefined) {
 			throw new FExceptionInvalidOperation(`Integrity error. No such topic queue '${topicId.value}'.`);
@@ -224,18 +224,18 @@ export class MessageBusBull extends MessageBusBase {
 			(async () => {
 				try {
 					await this.storage.using(executionContext, async (db: Database) => {
-						const topicId: TopicApiIdentifier = TopicApiIdentifier.parse(job.data.topicId);
-						const egressId: EgressApiIdentifier = EgressApiIdentifier.parse(job.data.egressId);
+						const topicId: TopicIdentifier = TopicIdentifier.parse(job.data.topicId);
+						const egressId: EgressIdentifier = EgressIdentifier.parse(job.data.egressId);
 
 						const rawMessage = job.data.message;
-						const messageId = MessageApiIdentifier.parse(rawMessage.id);
+						const messageId = MessageIdentifier.parse(rawMessage.id);
 
 						await db.lockEgressMessageQueue(
 							executionContext, { egressId, topicId, messageId }
 						);
 
 						try {
-							const topicChannelsMap: Map<TopicApiIdentifier["value"], MessageBusBullEventChannel> | undefined
+							const topicChannelsMap: Map<TopicIdentifier["value"], MessageBusBullEventChannel> | undefined
 								= this._channels.get(egressId.value);
 
 							if (topicChannelsMap === undefined || topicChannelsMap.size === 0) {
@@ -305,7 +305,7 @@ export class MessageBusBull extends MessageBusBase {
 		unpromise(
 			(async () => {
 				try {
-					const topicId: TopicApiIdentifier = TopicApiIdentifier.parse(job.data.topicId);
+					const topicId: TopicIdentifier = TopicIdentifier.parse(job.data.topicId);
 					const topicQueueItem: TopicQueueItem = this.getTopicQueueItem(topicId);
 					for (const [targetEgressId, targetEgressQueue] of topicQueueItem.targetEgressQueues) {
 						await targetEgressQueue.add(
@@ -327,9 +327,9 @@ export class MessageBusBull extends MessageBusBase {
 		);
 	}
 
-	private readonly _channels: Map<EgressApiIdentifier["value"], Map<TopicApiIdentifier["value"], MessageBusBullEventChannel>>;
-	private readonly _bullEgressQueues: Map<EgressApiIdentifier["value"], Queue>;
-	private readonly _bullTopicQueues: Map<TopicApiIdentifier["value"], TopicQueueItem>;
+	private readonly _channels: Map<EgressIdentifier["value"], Map<TopicIdentifier["value"], MessageBusBullEventChannel>>;
+	private readonly _bullEgressQueues: Map<EgressIdentifier["value"], Queue>;
+	private readonly _bullTopicQueues: Map<TopicIdentifier["value"], TopicQueueItem>;
 	private readonly _serverAdapter: ExpressAdapter;
 	private readonly _bullJobOpts: JobOptions;
 	private readonly _redisOpts: RedisOptions;
@@ -338,7 +338,7 @@ export class MessageBusBull extends MessageBusBase {
 
 interface TopicQueueItem {
 	readonly queue: Queue;
-	readonly targetEgressQueues: Set<[EgressApiIdentifier, Queue]>;
+	readonly targetEgressQueues: Set<[EgressIdentifier, Queue]>;
 }
 
 class MessageBusBullEventChannel

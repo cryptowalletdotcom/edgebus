@@ -1,5 +1,6 @@
 import { FException } from "@freemework/common";
-import { LabelHandlerApiIdentifier, TopicApiIdentifier } from "../misc/api-identifier";
+
+import { LabelHandlerIdentifier, TopicIdentifier } from "./identifiers";
 
 export namespace LabelHandler {
 
@@ -8,11 +9,11 @@ export namespace LabelHandler {
 	}
 
 	export interface Id {
-		readonly labelHandlerId: LabelHandlerApiIdentifier;
+		readonly labelHandlerId: LabelHandlerIdentifier;
 	}
 
 	export interface Base {
-		readonly topicId: TopicApiIdentifier;
+		readonly topicId: TopicIdentifier;
 	}
 
 	export interface ExternalProcess extends LabelHandler.Base {

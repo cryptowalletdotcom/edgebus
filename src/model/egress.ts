@@ -1,9 +1,6 @@
 import { FException } from "@freemework/common";
 
-import { Security } from "./security";
-import { Topic } from "./topic";
-import { Converter } from "./convert";
-import { EgressApiIdentifier, TopicApiIdentifier } from "../misc/api-identifier";
+import { EgressIdentifier, TopicIdentifier } from "./identifiers";
 
 export namespace Egress {
 	export const enum Kind {
@@ -24,7 +21,7 @@ export namespace Egress {
 	 * The API Identifier of the Egress
 	 */
 	export interface Id {
-		readonly egressId: EgressApiIdentifier;
+		readonly egressId: EgressIdentifier;
 	}
 
 	export interface DataBase {
@@ -32,7 +29,7 @@ export namespace Egress {
 		 * Name of the attached topic
 		 */
 		// TODO: Change type to ReadonlyArray<Topic.Id & Topic.Name> 
-		readonly egressTopicIds: ReadonlyArray<TopicApiIdentifier>;
+		readonly egressTopicIds: ReadonlyArray<TopicIdentifier>;
 
 		readonly egressKind: Kind;
 		// readonly egressConverters: ReadonlyArray<Converter>;

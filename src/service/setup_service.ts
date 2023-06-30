@@ -2,14 +2,14 @@ import { FException, FExceptionInvalidOperation, FExecutionContext } from "@free
 
 import * as _ from "lodash";
 
-import { DatabaseFactory } from "../data/database_factory";
 import { Settings } from "../settings";
 import { ManagementApi } from "../api/management_api";
-import { Topic } from "../model/topic";
-import { EgressApiIdentifier, IngressApiIdentifier, LabelHandlerApiIdentifier, TopicApiIdentifier } from "../misc/api-identifier";
-import { Ingress } from "../model/ingress";
-import { Uint8ArraysEqual } from "../utils/equals";
-import { Egress } from "../model/egress";
+import {
+	EgressIdentifier, Egress,
+	IngressIdentifier, Ingress,
+	LabelHandlerIdentifier,
+	TopicIdentifier, Topic
+} from "../model";
 
 
 export interface SetupService {
@@ -21,7 +21,7 @@ export class SetupServiceImpl implements SetupService {
 
 		// Setup topics
 		for (const setupTopic of setupSettings.topics) {
-			const topicId: TopicApiIdentifier = TopicApiIdentifier.parse(setupTopic.topicId);
+			const topicId: TopicIdentifier = TopicIdentifier.parse(setupTopic.topicId);
 			const topic: Topic | null = await managementApi.findTopic(executionContext, topicId);
 			if (topic !== null) {
 				// compare
@@ -48,7 +48,7 @@ export class SetupServiceImpl implements SetupService {
 			}
 
 			for (const setupLabelHandler of setupTopic.labelHandlers) {
-				const labelHandlerId: LabelHandlerApiIdentifier = LabelHandlerApiIdentifier.parse(setupLabelHandler.labelHandlerId);
+				const labelHandlerId: LabelHandlerIdentifier = LabelHandlerIdentifier.parse(setupLabelHandler.labelHandlerId);
 				const labelHandler = await managementApi.findLabelHandler(executionContext, labelHandlerId);
 
 				if (labelHandler !== null) {
@@ -75,8 +75,8 @@ export class SetupServiceImpl implements SetupService {
 
 		// Setup ingresses
 		for (const setupIngress of setupSettings.ingresses) {
-			const ingressId: IngressApiIdentifier = IngressApiIdentifier.parse(setupIngress.ingressId);
-			const ingressTopicId: TopicApiIdentifier = TopicApiIdentifier.parse(setupIngress.topicId);
+			const ingressId: IngressIdentifier = IngressIdentifier.parse(setupIngress.ingressId);
+			const ingressTopicId: TopicIdentifier = TopicIdentifier.parse(setupIngress.topicId);
 
 			const ingress: Ingress | null = await managementApi.findIngress(executionContext, ingressId);
 			if (ingress !== null) {
@@ -139,8 +139,8 @@ export class SetupServiceImpl implements SetupService {
 
 		// Setup egresses
 		for (const setupEgress of setupSettings.egresses) {
-			const egressId: EgressApiIdentifier = EgressApiIdentifier.parse(setupEgress.egressId);
-			const egressTopicIds: Array<TopicApiIdentifier> = setupEgress.sourceTopicIds.map(TopicApiIdentifier.parse);
+			const egressId: EgressIdentifier = EgressIdentifier.parse(setupEgress.egressId);
+			const egressTopicIds: Array<TopicIdentifier> = setupEgress.sourceTopicIds.map(TopicIdentifier.parse);
 
 			const egress: Egress | null = await managementApi.findEgress(executionContext, egressId);
 			if (egress !== null) {

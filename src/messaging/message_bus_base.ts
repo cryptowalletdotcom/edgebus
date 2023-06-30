@@ -1,7 +1,7 @@
 import { FException, FExceptionAggregate, FExceptionInvalidOperation, FExecutionContext, FInitableBase } from "@freemework/common";
 
 import { DatabaseFactory } from "../data/database_factory";
-import { EgressApiIdentifier, IngressApiIdentifier, TopicApiIdentifier } from "../misc/api-identifier";
+import { EgressIdentifier, IngressIdentifier, TopicIdentifier } from "../model";
 import { Message } from "../model/message";
 import { MessageBus } from "./message_bus";
 import { Topic } from "../model/topic";
@@ -11,17 +11,16 @@ import { LabelHandler } from "../model/label_handler";
 import { LabelsHandlerBase } from "./labels_handler/labels_handler_base";
 import { ExternalLabelsHandler } from "./labels_handler/external_process_labels_handler";
 import { Label } from "../model";
-import { bind } from "lodash";
 
 export abstract class MessageBusBase extends MessageBus {
 
-	private readonly labelHandlers: Map<TopicApiIdentifier["uuid"], Array<LabelsHandlerBase>>;
+	private readonly labelHandlers: Map<TopicIdentifier["uuid"], Array<LabelsHandlerBase>>;
 
 	public constructor(
 		protected readonly storage: DatabaseFactory,
 	) {
 		super();
-		this.labelHandlers = new Map<TopicApiIdentifier["uuid"], Array<LabelsHandlerBase>>();
+		this.labelHandlers = new Map<TopicIdentifier["uuid"], Array<LabelsHandlerBase>>();
 	}
 
 	protected async onInit(): Promise<void> {
@@ -57,7 +56,7 @@ export abstract class MessageBusBase extends MessageBus {
 
 	public async publish(
 		executionContext: FExecutionContext,
-		ingressId: IngressApiIdentifier, message: Message.Id & Message.Data
+		ingressId: IngressIdentifier, message: Message.Id & Message.Data
 	): Promise<void> {
 		await this.storage.using(
 			executionContext,
@@ -107,7 +106,7 @@ export abstract class MessageBusBase extends MessageBus {
 
 	public async registerEgress(
 		executionContext: FExecutionContext,
-		egressId: EgressApiIdentifier
+		egressId: EgressIdentifier
 	): Promise<void> {
 		await this.storage.using(
 			executionContext,
@@ -120,7 +119,7 @@ export abstract class MessageBusBase extends MessageBus {
 
 	public async registerTopic(
 		executionContext: FExecutionContext,
-		topicId: TopicApiIdentifier
+		topicId: TopicIdentifier
 	): Promise<void> {
 		await this.storage.using(
 			executionContext,
@@ -133,8 +132,8 @@ export abstract class MessageBusBase extends MessageBus {
 
 	public async retainChannel(
 		executionContext: FExecutionContext,
-		topicId: TopicApiIdentifier,
-		egressId: EgressApiIdentifier
+		topicId: TopicIdentifier,
+		egressId: EgressIdentifier
 	): Promise<MessageBus.Channel> {
 		return await this.storage.using(
 			executionContext,

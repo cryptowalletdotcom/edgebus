@@ -1,6 +1,6 @@
 import { FExecutionContext, FInitable, FInitableBase } from "@freemework/common";
 
-import { EgressApiIdentifier, IngressApiIdentifier, MessageApiIdentifier, TopicApiIdentifier } from "../misc/api-identifier";
+import { EgressIdentifier, IngressIdentifier, MessageIdentifier, TopicIdentifier } from "../model";
 import { Delivery, Egress, Ingress, Message, Topic } from "../model";
 import { Label } from "../model/label";
 import { LabelHandler } from "../model/label_handler";
@@ -40,8 +40,8 @@ export abstract class Database extends FInitableBase {
 	 */
 	public abstract createMessage(
 		executionContext: FExecutionContext,
-		ingressApiId: IngressApiIdentifier,
-		messageApiId: MessageApiIdentifier,
+		ingressApiId: IngressIdentifier,
+		messageApiId: MessageIdentifier,
 		headers: Message.Headers,
 		mimeType: string | null,
 		originalBody: Uint8Array | null,
@@ -132,5 +132,5 @@ export abstract class Database extends FInitableBase {
 }
 
 export namespace Database {
-	export type EgressMessageQueue = [TopicApiIdentifier, EgressApiIdentifier, MessageApiIdentifier];
+	export type EgressMessageQueue = [TopicIdentifier, EgressIdentifier, MessageIdentifier];
 }

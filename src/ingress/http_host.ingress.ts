@@ -6,13 +6,11 @@ import * as  _ from "lodash";
 
 import { MessageBus } from "../messaging/message_bus";
 
-import { Message, Topic } from "../model";
+import { IngressIdentifier, MessageIdentifier, Message, Topic } from "../model";
 
 import { BaseIngress } from "./base.ingress";
-import { DatabaseFactory } from "../data/database_factory";
 import { HttpBadRequestException } from "../endpoints/exceptions";
 import { MIME_APPLICATION_JSON } from "../utils/mime";
-import { IngressApiIdentifier, MessageApiIdentifier } from "../misc/api-identifier";
 import { Bind } from "../utils/bind";
 
 export class HttpHostIngress extends BaseIngress {
@@ -24,7 +22,7 @@ export class HttpHostIngress extends BaseIngress {
 
 	public constructor(
 		topic: Topic.Id & Topic.Name & Topic.Data,
-		ingressId: IngressApiIdentifier,
+		ingressId: IngressIdentifier,
 		private readonly _messageBus: MessageBus,
 		opts?: HttpHostIngress.Opts
 	) {
@@ -110,8 +108,8 @@ export class HttpHostIngress extends BaseIngress {
 				)
 			});
 
-			const ingressId: IngressApiIdentifier = this.ingressId;
-			const messageId: MessageApiIdentifier = new MessageApiIdentifier();
+			const ingressId: IngressIdentifier = this.ingressId;
+			const messageId: MessageIdentifier = MessageIdentifier.generate();
 
 			let body = ingressBody;
 			if (this._transformers !== null) {

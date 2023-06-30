@@ -1,9 +1,9 @@
-import { LabelApiIdentifier } from "../misc/api-identifier";
+import { LabelIdentifier } from "../model";
 
 export namespace Label {
 
 	export interface Id {
-		readonly labelId: LabelApiIdentifier;
+		readonly labelId: LabelIdentifier;
 	}
 
 	export interface Data {

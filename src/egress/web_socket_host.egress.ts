@@ -3,7 +3,7 @@ import { FWebServer } from "@freemework/hosting";
 
 import { WebSocketHostEgressEndpoint } from "../endpoints/websocket_host_subscriber_endpoint";
 import { MessageBus } from "../messaging/message_bus";
-import { EgressApiIdentifier } from "../misc/api-identifier";
+import { EgressIdentifier } from "../model";
 
 export class WebSocketHostEgress extends FInitableBase {
 	public constructor(opts: WebSocketHostEgress.Opts) {
@@ -43,7 +43,7 @@ export class WebSocketHostEgress extends FInitableBase {
 
 export namespace WebSocketHostEgress {
 	export interface Opts {
-		readonly egressId: EgressApiIdentifier;
+		readonly egressId: EgressIdentifier;
 		readonly bindServers: ReadonlyArray<FWebServer>;
 		readonly baseBindPath: string;
 		readonly channelFactories: ReadonlyArray<MessageBus.ChannelFactory>;

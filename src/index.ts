@@ -14,7 +14,7 @@ import { WebSocketHostEgress, WebhookEgress } from "./egress";
 import { MessageBus } from "./messaging/message_bus";
 import { Container } from "typescript-ioc";
 import { Settings } from "./settings";
-import { EgressApiIdentifier, IngressApiIdentifier, TopicApiIdentifier } from "./misc/api-identifier";
+import { EgressIdentifier, IngressIdentifier, TopicIdentifier } from "./model";
 import appInfo from "./utils/app_info";
 import { ProviderLocator } from "./provider_locator";
 import { SetupServiceProvider } from "./provider/setup_service_provider";
@@ -86,7 +86,7 @@ export default async function (executionContext: FExecutionContext, settings: Se
 		/* ---------HARDCODED INITIALIZATION--------------- */
 		{
 			const hardcodedPublisherConfigurations: Array<{
-				readonly topicId: TopicApiIdentifier,
+				readonly topicId: TopicIdentifier,
 				readonly topicName: string;
 				readonly topicDescription: string;
 				readonly topicMediaType: string;
@@ -113,7 +113,7 @@ export default async function (executionContext: FExecutionContext, settings: Se
 
 				for (const ingress of ingresses) {
 					hardcodedPublisherConfigurations.push({
-						topicId: TopicApiIdentifier.parse(topicsByIdMap.get(ingress.topicId)!.topicId),
+						topicId: TopicIdentifier.parse(topicsByIdMap.get(ingress.topicId)!.topicId),
 						topicName: topicsByIdMap.get(ingress.topicId)!.name,
 						topicDescription: topicsByIdMap.get(ingress.topicId)!.description,
 						topicMediaType: topicsByIdMap.get(ingress.topicId)!.mediaType,
@@ -150,7 +150,7 @@ export default async function (executionContext: FExecutionContext, settings: Se
 						topicDescription: hardcodedPublisherConfiguration.topicDescription,
 						topicMediaType: hardcodedPublisherConfiguration.topicMediaType,
 					},
-					IngressApiIdentifier.parse(ingressConfiguration.ingressId),
+					IngressIdentifier.parse(ingressConfiguration.ingressId),
 					messageBusProvider.wrap,
 					{
 						transformers: [],
@@ -173,11 +173,11 @@ export default async function (executionContext: FExecutionContext, settings: Se
 
 			// Setup egresses
 			for (const hardcodedSubscriberConfiguration of hardcodedSubscriberConfigurations) {
-				const egressId: EgressApiIdentifier = EgressApiIdentifier.parse(hardcodedSubscriberConfiguration.egress.egressId);
+				const egressId: EgressIdentifier = EgressIdentifier.parse(hardcodedSubscriberConfiguration.egress.egressId);
 				const channelFactories: Array<MessageBus.ChannelFactory> = [];
 				for (const topicIdStr of hardcodedSubscriberConfiguration.topicIds) {
 					const channelFactory = async (): Promise<MessageBus.Channel> => {
-						const topicId: TopicApiIdentifier = TopicApiIdentifier.parse(topicIdStr);
+						const topicId: TopicIdentifier = TopicIdentifier.parse(topicIdStr);
 						const channel = await messageBusProvider.wrap.retainChannel(executionContext, topicId, egressId);
 						return channel;
 					}

@@ -4,13 +4,15 @@ import { FException, FExecutionContext, FInitableBase, FLogger } from "@freemewo
 import { Topic } from "../model/topic";
 
 import { DatabaseFactory } from "../data/database_factory";
-import { EgressApiIdentifier, IngressApiIdentifier, LabelApiIdentifier, LabelHandlerApiIdentifier, TopicApiIdentifier } from "../misc/api-identifier";
+import {
+	EgressIdentifier, Egress,
+	IngressIdentifier, Ingress,
+	LabelHandlerIdentifier, LabelHandler,
+	LabelIdentifier, Label,
+	TopicIdentifier
+} from "../model";
 import { Database } from "../data/database";
-import { Ingress } from "../model/ingress";
-import { Egress } from "../model/egress";
 import { MessageBus } from "../messaging/message_bus";
-import { LabelHandler } from "../model/label_handler";
-import { Label } from "../model/label";
 
 /**
  * Management API allows to control user's delivery endpoints, like add/remove webhooks
@@ -32,7 +34,7 @@ export class ManagementApi extends FInitableBase {
 
 		const fullEgressData: Egress.Id & Egress.Data = {
 			...ingressData,
-			egressId: ingressData.egressId ?? new EgressApiIdentifier(),
+			egressId: ingressData.egressId ?? EgressIdentifier.generate(),
 		};
 
 		const egress: Egress = await this._db.createEgress(
@@ -54,7 +56,7 @@ export class ManagementApi extends FInitableBase {
 
 		const fullIngressData: Ingress.Id & Ingress.Data = {
 			...ingressData,
-			ingressId: ingressData.ingressId ?? new IngressApiIdentifier(),
+			ingressId: ingressData.ingressId ?? IngressIdentifier.generate(),
 		};
 
 		const ingress: Ingress = await this._db.createIngress(
@@ -72,13 +74,13 @@ export class ManagementApi extends FInitableBase {
 		this.verifyInitializedAndNotDisposed();
 
 		const fullLabelHandlerData: LabelHandler.Id & LabelHandler.Data = {
-			labelHandlerId: labelHandlerData.labelHandlerId ?? new LabelHandlerApiIdentifier(),
+			labelHandlerId: labelHandlerData.labelHandlerId ?? LabelHandlerIdentifier.generate(),
 			topicId: labelHandlerData.topicId,
 			labelHandlerKind: labelHandlerData.labelHandlerKind,
 			externalProcessPath: labelHandlerData.externalProcessPath
 		};
 
-		const labelHandlerId: LabelHandlerApiIdentifier = await this._db.createLabelHandler(
+		const labelHandlerId: LabelHandlerIdentifier = await this._db.createLabelHandler(
 			executionContext,
 			fullLabelHandlerData
 		);
@@ -95,7 +97,7 @@ export class ManagementApi extends FInitableBase {
 		this.verifyInitializedAndNotDisposed();
 
 		const fullTopicData: Topic.Id & Topic.Data = {
-			topicId: topicData.topicId ?? new TopicApiIdentifier(),
+			topicId: topicData.topicId ?? TopicIdentifier.generate(),
 			topicName: topicData.topicName,
 			topicDomain: topicData.topicDomain,
 			topicDescription: topicData.topicDescription,
@@ -114,7 +116,7 @@ export class ManagementApi extends FInitableBase {
 		return topic;
 	}
 
-	public async findEgress(executionContext: FExecutionContext, egressId: EgressApiIdentifier): Promise<Egress | null> {
+	public async findEgress(executionContext: FExecutionContext, egressId: EgressIdentifier): Promise<Egress | null> {
 		this.verifyInitializedAndNotDisposed();
 
 		const egress = await this._db.findEgress(executionContext, { egressId });
@@ -122,7 +124,7 @@ export class ManagementApi extends FInitableBase {
 		return egress;
 	}
 
-	public async findIngress(executionContext: FExecutionContext, ingressId: IngressApiIdentifier): Promise<Ingress | null> {
+	public async findIngress(executionContext: FExecutionContext, ingressId: IngressIdentifier): Promise<Ingress | null> {
 		this.verifyInitializedAndNotDisposed();
 
 		const ingress = await this._db.findIngress(executionContext, { ingressId });
@@ -130,7 +132,7 @@ export class ManagementApi extends FInitableBase {
 		return ingress;
 	}
 
-	public async findLabel(executionContext: FExecutionContext, labelId: LabelApiIdentifier): Promise<Label | null> {
+	public async findLabel(executionContext: FExecutionContext, labelId: LabelIdentifier): Promise<Label | null> {
 		this.verifyInitializedAndNotDisposed();
 
 		const label = await this._db.findLabel(executionContext, { labelId });
@@ -138,7 +140,7 @@ export class ManagementApi extends FInitableBase {
 		return label;
 	}
 
-	public async findLabelHandler(executionContext: FExecutionContext, labelHandlerId: LabelHandlerApiIdentifier): Promise<LabelHandler | null> {
+	public async findLabelHandler(executionContext: FExecutionContext, labelHandlerId: LabelHandlerIdentifier): Promise<LabelHandler | null> {
 		this.verifyInitializedAndNotDisposed();
 
 		const labelHandler = await this._db.findLabelHandler(executionContext, { labelHandlerId });
@@ -146,7 +148,7 @@ export class ManagementApi extends FInitableBase {
 		return labelHandler;
 	}
 
-	public async findTopic(executionContext: FExecutionContext, topicId: TopicApiIdentifier): Promise<Topic | null> {
+	public async findTopic(executionContext: FExecutionContext, topicId: TopicIdentifier): Promise<Topic | null> {
 		this.verifyInitializedAndNotDisposed();
 
 		const topic = await this._db.findTopic(executionContext, { topicId });

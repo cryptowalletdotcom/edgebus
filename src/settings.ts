@@ -437,7 +437,7 @@ function parseSetup(setupConfiguration: FConfiguration): Settings.Setup | null {
 				const egressId: string = subscriberConfiguration.get("index").asString;
 				const type: string = subscriberConfiguration.get("kind").asString;
 				const sourceTopicIds: string = subscriberConfiguration.get("source_topic_ids").asString;
-				const baseSubscriberSettings = { egressId, sourceTopicIds: sourceTopicIds.split(" ").filter(w => w !== "") };
+				const baseSubscriberSettings =  { egressId, sourceTopicIds: sourceTopicIds.split(" ").filter(w => w !== "") };
 				let subscriberSettings: Settings.Setup.Egress;
 				switch (type) {
 					case EgressModel.Kind.Webhook:

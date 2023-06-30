@@ -3,7 +3,15 @@ import { FSqlConnectionFactoryPostgres } from "@freemework/sql.postgres";
 
 import * as _ from "lodash";
 
-import { DeliveryApiIdentifier, EgressApiIdentifier, IngressApiIdentifier, LabelApiIdentifier, LabelHandlerApiIdentifier, MessageApiIdentifier, TopicApiIdentifier } from "../../misc/api-identifier";
+import {
+	DeliveryIdentifier,
+	EgressIdentifier,
+	IngressIdentifier,
+	LabelIdentifier, 
+	LabelHandlerIdentifier,
+	MessageIdentifier,
+	TopicIdentifier
+} from "../../model";
 import { Delivery, Egress, Ingress, Message, Topic, ensureEgressKind, ensureIngressKind } from "../../model";
 import { SqlDatabase } from "../sql_database";
 import { Database } from "../database";
@@ -41,7 +49,7 @@ export class PostgresDatabase extends SqlDatabase {
 	): Promise<Delivery> {
 		this.verifyInitializedAndNotDisposed();
 
-		const deliveryId: DeliveryApiIdentifier = deliveryData.deliveryId ?? new DeliveryApiIdentifier();
+		const deliveryId: DeliveryIdentifier = deliveryData.deliveryId ?? DeliveryIdentifier.generate();
 
 		const sqlCreatedSate = await this.sqlConnection
 			.statement(`
@@ -101,7 +109,7 @@ export class PostgresDatabase extends SqlDatabase {
 	): Promise<Egress> {
 		this.verifyInitializedAndNotDisposed();
 
-		const egressId: EgressApiIdentifier = egressData.egressId ?? new EgressApiIdentifier();
+		const egressId: EgressIdentifier = egressData.egressId ?? EgressIdentifier.generate();
 
 		const egressMainRecord: FSqlResultRecord = await this.sqlConnection
 			.statement(`
@@ -182,7 +190,7 @@ export class PostgresDatabase extends SqlDatabase {
 	): Promise<Ingress> {
 		this.verifyInitializedAndNotDisposed();
 
-		const ingressId: IngressApiIdentifier = ingressData.ingressId ?? new IngressApiIdentifier();
+		const ingressId: IngressIdentifier = ingressData.ingressId ?? IngressIdentifier.generate();
 
 		const sqlMainRecord: FSqlResultRecord = await this.sqlConnection
 			.statement(`
@@ -240,8 +248,8 @@ export class PostgresDatabase extends SqlDatabase {
 
 	public async createMessage(
 		executionContext: FExecutionContext,
-		ingressApiId: IngressApiIdentifier,
-		messageApiId: MessageApiIdentifier,
+		ingressApiId: IngressIdentifier,
+		messageApiId: MessageIdentifier,
 		headers: Message.Headers,
 		mimeType: string | null,
 		originalBody: Uint8Array | null,
@@ -319,7 +327,7 @@ export class PostgresDatabase extends SqlDatabase {
 			throw new FExceptionInvalidOperation(`Can not find topic ${labelHandlerData.topicId} to create label handler`);
 		}
 
-		const labelHandlerId: LabelHandlerApiIdentifier = labelHandlerData.labelHandlerId ?? new LabelHandlerApiIdentifier();
+		const labelHandlerId: LabelHandlerIdentifier = labelHandlerData.labelHandlerId ?? LabelHandlerIdentifier.generate();
 
 		const sqlMainRecord: FSqlResultRecord = await this.sqlConnection
 			.statement(`
@@ -356,7 +364,7 @@ export class PostgresDatabase extends SqlDatabase {
 	public async createLabel(executionContext: FExecutionContext, labelData: Partial<Label.Id> & Label.Data): Promise<Label> {
 		this.verifyInitializedAndNotDisposed();
 
-		const labelId: LabelApiIdentifier = labelData.labelId ?? new LabelApiIdentifier();
+		const labelId: LabelIdentifier = labelData.labelId ?? LabelIdentifier.generate();
 
 		const sqlRecord: FSqlResultRecord = await this.sqlConnection
 			.statement(`
@@ -381,7 +389,7 @@ export class PostgresDatabase extends SqlDatabase {
 	): Promise<Topic> {
 		this.verifyInitializedAndNotDisposed();
 
-		const topicId: TopicApiIdentifier = topicData.topicId ?? new TopicApiIdentifier();
+		const topicId: TopicIdentifier = topicData.topicId ?? TopicIdentifier.generate();
 
 		const sqlRecord: FSqlResultRecord = await this.sqlConnection
 			.statement(`
@@ -992,7 +1000,7 @@ export class PostgresDatabase extends SqlDatabase {
 	private static _mapEgressDbRow(
 		egressMainRecord: FSqlResultRecord,
 		egressExtRecord: FSqlResultRecord,
-		egressTopics?: ReadonlyArray<TopicApiIdentifier>
+		egressTopics?: ReadonlyArray<TopicIdentifier>
 	): Egress {
 		const egressUuid: string = egressMainRecord.get("api_uuid").asString;
 		const egressKind: string = egressMainRecord.get("kind").asString;
@@ -1005,7 +1013,7 @@ export class PostgresDatabase extends SqlDatabase {
 			try {
 				const egressTopicUuids: Array<string> | null = egressMainRecord.get("topic_uuids").asObjectNullable;
 				egressTopics = egressTopicUuids !== null
-					? egressTopicUuids.map(TopicApiIdentifier.fromUuid)
+					? egressTopicUuids.map(TopicIdentifier.fromUuid)
 					: [];
 			} catch (e) {
 				throw e;
@@ -1013,7 +1021,7 @@ export class PostgresDatabase extends SqlDatabase {
 		}
 
 		const egressBase: Egress.Id & Omit<Egress.DataBase, "egressKind"> & Egress.Instance = {
-			egressId: EgressApiIdentifier.fromUuid(egressUuid),
+			egressId: EgressIdentifier.fromUuid(egressUuid),
 			egressTopicIds: egressTopics,
 			egressCreatedAt: egressCreatedAt,
 			egressDeletedAt: egressDeletedAt,
@@ -1051,8 +1059,8 @@ export class PostgresDatabase extends SqlDatabase {
 		ensureIngressKind(ingressKind);
 
 		const ingressBase: Ingress.Id & Omit<Ingress.DataBase, "ingressKind"> & Ingress.Instance = {
-			ingressId: IngressApiIdentifier.fromUuid(ingressUuid),
-			ingressTopicId: TopicApiIdentifier.fromUuid(ingressTopicUuid),
+			ingressId: IngressIdentifier.fromUuid(ingressUuid),
+			ingressTopicId: TopicIdentifier.fromUuid(ingressTopicUuid),
 			ingressCreatedAt,
 			ingressDeletedAt,
 		};
@@ -1082,7 +1090,7 @@ export class PostgresDatabase extends SqlDatabase {
 		const ingressBody: Uint8Array | null = sqlRecord.get("original_body").asBinaryNullable;
 		const body: Uint8Array = sqlRecord.get("body").asBinary;
 
-		const messageId: MessageApiIdentifier = MessageApiIdentifier.fromUuid(messageUuid);
+		const messageId: MessageIdentifier = MessageIdentifier.fromUuid(messageUuid);
 
 		return {
 			messageId,
@@ -1104,7 +1112,7 @@ export class PostgresDatabase extends SqlDatabase {
 		const labelDeletedAt: Date | null = sqlRow.get("utc_deleted_date").asDateNullable;
 
 		const label: Label = {
-			labelId: LabelApiIdentifier.fromUuid(labelUuid),
+			labelId: LabelIdentifier.fromUuid(labelUuid),
 			value: labelValue,
 			labelCreatedAt,
 			labelDeletedAt
@@ -1121,8 +1129,8 @@ export class PostgresDatabase extends SqlDatabase {
 		const labelHandlerKind: string = sqlRow.get("kind").asString;
 		const labelHandlerCreatedAt: Date = sqlRow.get("utc_created_date").asDate;
 		const labelHandlerDeletedAt: Date | null = sqlRow.get("utc_deleted_date").asDateNullable;
-		const labelHandlerId: LabelHandlerApiIdentifier = LabelHandlerApiIdentifier.fromUuid(labelHandlerUuid);
-		const topicId: TopicApiIdentifier = TopicApiIdentifier.fromUuid(topicUuid);
+		const labelHandlerId: LabelHandlerIdentifier = LabelHandlerIdentifier.fromUuid(labelHandlerUuid);
+		const topicId: TopicIdentifier = TopicIdentifier.fromUuid(topicUuid);
 
 		switch (labelHandlerKind) {
 			case LabelHandler.Kind.ExternalProcess:
@@ -1155,7 +1163,7 @@ export class PostgresDatabase extends SqlDatabase {
 		const topicDeletedAt: Date | null = sqlRow.get("utc_deleted_date").asDateNullable;
 
 		const topic: Topic = {
-			topicId: TopicApiIdentifier.fromUuid(topicUuid),
+			topicId: TopicIdentifier.fromUuid(topicUuid),
 			topicName,
 			topicDomain,
 			topicDescription,
