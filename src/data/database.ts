@@ -7,6 +7,10 @@ import { LabelHandler } from "../model/label_handler";
 
 export abstract class Database extends FInitableBase {
 
+	/**
+	 * @deprecated
+	 * @todo Move this functionality into createMessage
+	 */
 	public abstract bindLabelToMessage(
 		executionContext: FExecutionContext,
 		message: Message.Id,
@@ -37,6 +41,7 @@ export abstract class Database extends FInitableBase {
 	 * @param mimeType TBD
 	 * @param body TBD
 	 * @param originalBody TBD
+	 * @param labels list of message labels
 	 */
 	public abstract createMessage(
 		executionContext: FExecutionContext,
@@ -46,6 +51,7 @@ export abstract class Database extends FInitableBase {
 		mimeType: string | null,
 		originalBody: Uint8Array | null,
 		body: Uint8Array | null,
+		labels: ReadonlyArray<Label>
 	): Promise<Message>;
 
 	public abstract createLabelHandler(
@@ -66,7 +72,7 @@ export abstract class Database extends FInitableBase {
 
 	public abstract findLabel(executionContext: FExecutionContext, opts: Label.Id): Promise<Label | null>;
 
-	public abstract findLabelByValue(executionContext: FExecutionContext, value: Label.Data["value"]): Promise<Label | null>;
+	public abstract findLabelByValue(executionContext: FExecutionContext, value: Label.Data["labelValue"]): Promise<Label | null>;
 
 	public abstract findLabelHandler(executionContext: FExecutionContext, opts: LabelHandler.Id): Promise<LabelHandler | null>;
 
@@ -75,6 +81,8 @@ export abstract class Database extends FInitableBase {
 	public abstract getEgress(executionContext: FExecutionContext, opts: Egress.Id): Promise<Egress>;
 
 	public abstract getIngress(executionContext: FExecutionContext, opts: Ingress.Id): Promise<Ingress>;
+
+	public abstract getLabel(executionContext: FExecutionContext, opts: Label.Id): Promise<Label>;
 
 	public abstract getTopic(executionContext: FExecutionContext, opts: Topic.Id | Topic.Name | Ingress.Id): Promise<Topic>;
 

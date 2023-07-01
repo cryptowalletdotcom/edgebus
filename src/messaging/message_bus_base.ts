@@ -56,7 +56,8 @@ export abstract class MessageBusBase extends MessageBus {
 
 	public async publish(
 		executionContext: FExecutionContext,
-		ingressId: IngressIdentifier, message: Message.Id & Message.Data
+		ingressId: IngressIdentifier,
+		message: Message.Id & Message.Data
 	): Promise<void> {
 		await this.storage.using(
 			executionContext,
@@ -64,42 +65,48 @@ export abstract class MessageBusBase extends MessageBus {
 				const topic: Topic = await db.getTopic(executionContext, { ingressId });
 				const ingress: Ingress = await db.getIngress(executionContext, { ingressId });
 
-				const createdMessage: Message = await db.createMessage(
-					executionContext, ingressId,
-					message.messageId, message.headers,
-					message.mediaType, message.ingressBody,
-					message.body
-				);
-				const labelHandlers = this.labelHandlers.get(topic.topicId.uuid);
-
+				const labelValues: Set<Label["labelValue"]> = new Set();
+				const labelHandlers: ReadonlyArray<LabelsHandlerBase> | undefined = this.labelHandlers.get(topic.topicId.uuid);
 				if (labelHandlers !== undefined) {
-
-					const exs: Array<FException> = []
-					const settedLabels: Array<string> = [];
-
-					await Promise.all(labelHandlers
-						.map(e => e.execute(executionContext, createdMessage)
-							.then(e => settedLabels.push(...e))
-							.catch(e => exs.push(FException.wrapIfNeeded(e))))
-					)
-
+					const exs: Array<FException> = [];
+					await Promise.all(
+						labelHandlers.map(labelHandler => labelHandler.execute(executionContext, {
+							...message
+						}).then(
+							resolvedLabels => resolvedLabels.forEach(
+								resolvedLabel => labelValues.add(resolvedLabel)
+							)
+						).catch(e => exs.push(FException.wrapIfNeeded(e))))
+					);
 					FExceptionAggregate.throwIfNeeded(exs);
-
-					const labelValues = new Set(settedLabels);
-
-					for (const value of labelValues) {
-						let label: Label | null = await db.findLabelByValue(executionContext, value);
-						if (!label) {
-							label = await db.createLabel(executionContext, { value });
-						}
-						await db.bindLabelToMessage(executionContext, createdMessage, label);
-					}
 				}
 
-				await this.onPublish(
-					executionContext, ingress,
-					topic, message
+				const labels: Array<Label> = [];
+				for (const labelValue of labelValues) {
+					let label: Label | null = await db.findLabelByValue(executionContext, labelValue);
+					if (label === null) {
+						label = await db.createLabel(executionContext, { labelValue: labelValue });
+					}
+					labels.push(label);
+				}
+
+				const messageInstance: Message = await db.createMessage(
+					executionContext,
+					ingressId,
+					message.messageId,
+					message.messageHeaders,
+					message.messageMediaType,
+					message.messageIngressBody,
+					message.messageBody,
+					labels
 				);
+
+				// TODO Remove
+				for (const label of labels) {
+					await db.bindLabelToMessage(executionContext, messageInstance, label);
+				}
+
+				await this.onPublish(executionContext, ingress, topic, messageInstance);
 			}
 		);
 	}
@@ -149,7 +156,7 @@ export abstract class MessageBusBase extends MessageBus {
 		executionContext: FExecutionContext,
 		ingress: Ingress,
 		topic: Topic,
-		message: Message.Id & Message.Data
+		message: Message.Id & Message.Data & Message.Labels
 	): Promise<void>;
 
 	protected abstract onRegisterEgress(

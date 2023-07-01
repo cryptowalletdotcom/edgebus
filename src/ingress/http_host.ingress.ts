@@ -118,13 +118,12 @@ export class HttpHostIngress extends BaseIngress {
 				}
 			}
 
-			const message: Message.Id & Message.Data = Object.freeze({
+			const message: Message.Id & Message.Data = Object.freeze<Message.Id & Message.Data>({
 				messageId,
-				headers,
-				mediaType: MIME_APPLICATION_JSON,
-				ingressBody,
-				body,
-				labels: []
+				messageHeaders: headers,
+				messageMediaType: MIME_APPLICATION_JSON,
+				messageIngressBody: ingressBody,
+				messageBody: body
 			});
 
 			await this._messageBus.publish(req.executionContext, ingressId, message);

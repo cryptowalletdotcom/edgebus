@@ -134,8 +134,8 @@ class TextChannel extends EventChannelBase<string> implements FWebSocketChannelF
 		topicName: Topic["topicName"],
 		message: Message.Id & Message.Data
 	): Promise<void> {
-		const mediaType: string = message.mediaType;
-		const messageBody: Buffer = Buffer.from(message.body);
+		const mediaType: string = message.messageMediaType;
+		const messageBody: Buffer = Buffer.from(message.messageBody);
 		let data: any = { rawBase64: messageBody.toString("base64") };
 		switch (mediaType) {
 			case "application/json":
@@ -147,7 +147,7 @@ class TextChannel extends EventChannelBase<string> implements FWebSocketChannelF
 			jsonrpc: "2.0",
 			method: topicName,
 			id: message.messageId,
-			params: { mediaType, headers: message.headers, data }
+			params: { mediaType, headers: message.messageHeaders, data }
 		});
 
 		await this.notify(executionContext, { data: messageStr });

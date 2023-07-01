@@ -18,8 +18,11 @@ export class ExternalLabelsHandler extends LabelsHandlerBase {
 		this.log = FLogger.create(ExternalLabelsHandler.name);
 	}
 
-	public execute(executionContext: FExecutionContext, message: Message): Promise<string[]> {
-		return new Promise((res, rej) => {
+	public execute(
+		executionContext: FExecutionContext,
+		message: Message.Id & Message.Data
+	): Promise<Array<string>> {
+		return new Promise((resolve, reject) => {
 			const cmd = spawn(this.getLabelHandlerFullPath(this.externalProcessPath));
 
 			cmd.stderr.on('data', (data) => {
@@ -28,12 +31,12 @@ export class ExternalLabelsHandler extends LabelsHandlerBase {
 
 			cmd.stdout.on('data', (data) => {
 				const result = JSON.parse(data.toString());
-				res(ensure.array(result));
+				resolve(ensure.array(result));
 			});
 
-			cmd.on('error', (error) => {
+			cmd.once('error', (error) => {
 				this.log.error(executionContext, error.toString());
-				rej(error);
+				reject(error);
 			});
 
 			cmd.stdin?.write(JSON.stringify(message));

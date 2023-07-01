@@ -7,18 +7,17 @@ export namespace Label {
 	}
 
 	export interface Data {
-		readonly value: string;
+		readonly labelValue: string;
 	}
-	
+
 	export interface Instance {
 		readonly labelCreatedAt: Date;
 		readonly labelDeletedAt: Date | null;
 	}
-	
 }
 
-export type Label
-	= Label.Id
+export type Label =
+	& Label.Id
 	& Label.Data
 	& Label.Instance
 	;

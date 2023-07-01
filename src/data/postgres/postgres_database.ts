@@ -7,7 +7,7 @@ import {
 	DeliveryIdentifier,
 	EgressIdentifier,
 	IngressIdentifier,
-	LabelIdentifier, 
+	LabelIdentifier,
 	LabelHandlerIdentifier,
 	MessageIdentifier,
 	TopicIdentifier
@@ -254,6 +254,7 @@ export class PostgresDatabase extends SqlDatabase {
 		mimeType: string | null,
 		originalBody: Uint8Array | null,
 		body: Uint8Array | null,
+		labels: ReadonlyArray<Label>
 	): Promise<Message> {
 		this.verifyInitializedAndNotDisposed();
 
@@ -303,7 +304,7 @@ export class PostgresDatabase extends SqlDatabase {
 
 
 
-		return PostgresDatabase._mapCreatedMessageDbRow(messageResultRecord);
+		return PostgresDatabase._mapCreatedMessageDbRow(messageResultRecord, labels);
 	}
 
 	public async createLabelHandler(
@@ -375,7 +376,7 @@ export class PostgresDatabase extends SqlDatabase {
 			.executeSingle(
 				executionContext,
 			/* 1 */labelId.uuid,
-			/* 2 */labelData.value,
+			/* 2 */labelData.labelValue,
 			);
 
 		const labelModel: Label = PostgresDatabase._mapLabelDbRow(sqlRecord);
@@ -586,7 +587,7 @@ export class PostgresDatabase extends SqlDatabase {
 		return label;
 	}
 
-	public async findLabelByValue(executionContext: FExecutionContext, value: Label.Data["value"]): Promise<Label | null> {
+	public async findLabelByValue(executionContext: FExecutionContext, value: Label.Data["labelValue"]): Promise<Label | null> {
 		this.verifyInitializedAndNotDisposed();
 
 		const sqlRecord: FSqlResultRecord | null = await this.sqlConnection
@@ -698,54 +699,6 @@ export class PostgresDatabase extends SqlDatabase {
 		return egressModel;
 	}
 
-
-
-	public async lockEgressMessageQueue(
-		executionContext: FExecutionContext,
-		opts: Topic.Id & Egress.Id & Message.Id
-	): Promise<void> {
-		this.verifyInitializedAndNotDisposed();
-
-		await this.sqlConnection
-			.statement(`
-						SELECT 1
-						FROM "tb_egress_message_queue" AS EMQ
-						INNER JOIN "tb_topic" AS T ON T."id" = EMQ."topic_id"
-						INNER JOIN "tb_egress" AS E ON E."id" = EMQ."egress_id"
-						INNER JOIN "tb_message" AS M ON M."id" = EMQ."message_id"
-						WHERE T."api_uuid" = $1 AND E."api_uuid" = $2 AND M."api_uuid" = $3
-						FOR UPDATE
-					`)
-			.executeSingle(
-				executionContext,
-				/* 1 */opts.topicId.uuid,
-				/* 1 */opts.egressId.uuid,
-				/* 1 */opts.messageId.uuid,
-			);
-	}
-
-	public async removeEgressMessageQueue(
-		executionContext: FExecutionContext,
-		opts: Topic.Id & Egress.Id & Message.Id
-	): Promise<void> {
-		this.verifyInitializedAndNotDisposed();
-
-		await this.sqlConnection
-			.statement(`
-						DELETE
-						FROM "tb_egress_message_queue"
-						WHERE "topic_id" = (SELECT "id" FROM "tb_topic" WHERE "api_uuid" = $1)
-							AND "egress_id" = (SELECT "id" FROM "tb_egress" WHERE "api_uuid" = $2)
-							AND "message_id" = (SELECT "id" FROM "tb_message" WHERE "api_uuid" = $3)
-					`)
-			.execute(
-				executionContext,
-				/* 1 */opts.topicId.uuid,
-				/* 1 */opts.egressId.uuid,
-				/* 1 */opts.messageId.uuid,
-			);
-	}
-
 	public async getIngress(executionContext: FExecutionContext, opts: Ingress.Id): Promise<Ingress> {
 		const ingressModel: Ingress | null = await this.findIngress(executionContext, opts);
 
@@ -754,6 +707,16 @@ export class PostgresDatabase extends SqlDatabase {
 		}
 
 		return ingressModel;
+	}
+
+	public async getLabel(executionContext: FExecutionContext, opts: Label.Id): Promise<Label> {
+		const labelModel: Label | null = await this.findLabel(executionContext, opts);
+
+		if (labelModel === null) {
+			throw new FExceptionInvalidOperation(`Trying to get non-existing label.`);
+		}
+
+		return labelModel;
 	}
 
 	public async getTopic(executionContext: FExecutionContext, opts: Topic.Id | Topic.Name | Ingress.Id): Promise<Topic> {
@@ -861,6 +824,52 @@ export class PostgresDatabase extends SqlDatabase {
 
 		const topicModels: Array<Topic> = sqlRecords.map(PostgresDatabase._mapTopicDbRow);
 		return topicModels;
+	}
+
+	public async lockEgressMessageQueue(
+		executionContext: FExecutionContext,
+		opts: Topic.Id & Egress.Id & Message.Id
+	): Promise<void> {
+		this.verifyInitializedAndNotDisposed();
+
+		await this.sqlConnection
+			.statement(`
+						SELECT 1
+						FROM "tb_egress_message_queue" AS EMQ
+						INNER JOIN "tb_topic" AS T ON T."id" = EMQ."topic_id"
+						INNER JOIN "tb_egress" AS E ON E."id" = EMQ."egress_id"
+						INNER JOIN "tb_message" AS M ON M."id" = EMQ."message_id"
+						WHERE T."api_uuid" = $1 AND E."api_uuid" = $2 AND M."api_uuid" = $3
+						FOR UPDATE
+					`)
+			.executeSingle(
+				executionContext,
+				/* 1 */opts.topicId.uuid,
+				/* 1 */opts.egressId.uuid,
+				/* 1 */opts.messageId.uuid,
+			);
+	}
+
+	public async removeEgressMessageQueue(
+		executionContext: FExecutionContext,
+		opts: Topic.Id & Egress.Id & Message.Id
+	): Promise<void> {
+		this.verifyInitializedAndNotDisposed();
+
+		await this.sqlConnection
+			.statement(`
+						DELETE
+						FROM "tb_egress_message_queue"
+						WHERE "topic_id" = (SELECT "id" FROM "tb_topic" WHERE "api_uuid" = $1)
+							AND "egress_id" = (SELECT "id" FROM "tb_egress" WHERE "api_uuid" = $2)
+							AND "message_id" = (SELECT "id" FROM "tb_message" WHERE "api_uuid" = $3)
+					`)
+			.execute(
+				executionContext,
+				/* 1 */opts.topicId.uuid,
+				/* 1 */opts.egressId.uuid,
+				/* 1 */opts.messageId.uuid,
+			);
 	}
 
 	// public async removeSubscriber(
@@ -1083,6 +1092,7 @@ export class PostgresDatabase extends SqlDatabase {
 
 	private static _mapCreatedMessageDbRow(
 		sqlRecord: FSqlResultRecord,
+		labels: ReadonlyArray<Label>,
 	): Message {
 		const messageUuid: string = sqlRecord.get("api_uuid").asString;
 		const headers: Record<string, string> = sqlRecord.get("headers").asObject;
@@ -1094,12 +1104,11 @@ export class PostgresDatabase extends SqlDatabase {
 
 		return {
 			messageId,
-			headers,
-			mediaType,
-			ingressBody: ingressBody ?? body,
-			body,
-			status: Message.Status.Kind.NEW,
-			deliveryAttemptsCount: 0
+			messageHeaders: headers,
+			messageMediaType: mediaType,
+			messageIngressBody: ingressBody ?? body,
+			messageBody: body,
+			messageLabels: labels
 		}
 	}
 
@@ -1113,7 +1122,7 @@ export class PostgresDatabase extends SqlDatabase {
 
 		const label: Label = {
 			labelId: LabelIdentifier.fromUuid(labelUuid),
-			value: labelValue,
+			labelValue: labelValue,
 			labelCreatedAt,
 			labelDeletedAt
 		};

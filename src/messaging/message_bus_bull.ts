@@ -7,7 +7,7 @@ import { createBullBoard } from "@bull-board/api";
 import { BullAdapter } from "@bull-board/api/bullAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 
-import { EgressIdentifier, MessageIdentifier, TopicIdentifier } from "../model";
+import { EgressIdentifier, Label, LabelIdentifier, MessageIdentifier, TopicIdentifier } from "../model";
 import { Message } from "../model/message";
 import { MessageBus } from "./message_bus";
 import { MessageBusBase } from "./message_bus_base";
@@ -74,7 +74,7 @@ export class MessageBusBull extends MessageBusBase {
 		executionContext: FExecutionContext,
 		ingress: Ingress,
 		topic: Topic,
-		message: Message.Id & Message.Data
+		message: Message.Id & Message.Data & Message.Labels
 	): Promise<void> {
 		const topicQueueItem: TopicQueueItem = this.getOrRegisterTopicQueue(topic);
 
@@ -84,12 +84,13 @@ export class MessageBusBull extends MessageBusBase {
 				topicId: topic.topicId.value,
 				message: {
 					id: message.messageId.value,
-					mediaType: message.mediaType,
-					headers: message.headers,
-					ingressBody: Buffer.from(message.ingressBody).toString("base64"),
-					ingressBodyJson: message.mediaType === MIME_APPLICATION_JSON ? JSON.parse(Buffer.from(message.ingressBody).toString()) : null,
-					body: Buffer.from(message.body).toString("base64"),
-					bodyJson: message.mediaType === MIME_APPLICATION_JSON ? JSON.parse(Buffer.from(message.body).toString()) : null,
+					mediaType: message.messageMediaType,
+					headers: message.messageHeaders,
+					ingressBody: Buffer.from(message.messageIngressBody).toString("base64"),
+					ingressBodyJson: message.messageMediaType === MIME_APPLICATION_JSON ? JSON.parse(Buffer.from(message.messageIngressBody).toString()) : null,
+					body: Buffer.from(message.messageBody).toString("base64"),
+					bodyJson: message.messageMediaType === MIME_APPLICATION_JSON ? JSON.parse(Buffer.from(message.messageBody).toString()) : null,
+					labels: message.messageLabels.map(l => ({ id: l.labelId.value, value: l.labelValue }))
 				}
 			},
 			this._bullJobOpts
@@ -247,12 +248,21 @@ export class MessageBusBull extends MessageBusBase {
 								throw new FException("No any egress consumers");
 							}
 
-							const message: Message.Id & Message.Data = {
+							const labels: Array<Label> = [];
+							{
+								const labelIds: Array<LabelIdentifier> = rawMessage.labels.map((l: any) => LabelIdentifier.parse(l.id));
+								for (const labelId of labelIds) {
+									labels.push(await db.getLabel(executionContext, { labelId }));
+								}
+							}
+
+							const message: Message = {
 								messageId,
-								mediaType: rawMessage.mediaType,
-								headers: rawMessage.headers,
-								ingressBody: Buffer.from(rawMessage.ingressBody, "base64"),
-								body: Buffer.from(rawMessage.body, "base64"),
+								messageMediaType: rawMessage.mediaType,
+								messageHeaders: rawMessage.headers,
+								messageIngressBody: Buffer.from(rawMessage.ingressBody, "base64"),
+								messageBody: Buffer.from(rawMessage.body, "base64"),
+								messageLabels: labels
 							};
 
 							const event: MessageBus.Channel.Event = {
@@ -267,7 +277,8 @@ export class MessageBusBull extends MessageBusBase {
 
 							await db.createDelivery(executionContext, {
 								egressId,
-								topicId, messageId,
+								topicId,
+								messageId,
 								status: Delivery.Status.Success,
 								successEvidence: event.deliveryEvidence ?? null
 							});

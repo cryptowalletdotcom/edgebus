@@ -120,7 +120,7 @@ export class WebhookEgress extends FInitableBase {
 	}
 
 	private static _extractHttpMethod(message: Message.Data): string | null {
-		const httpMethod = message.headers['http.method'];
+		const httpMethod = message.messageHeaders['http.method'];
 		if (httpMethod !== undefined) {
 			return httpMethod;
 		} else {
@@ -131,7 +131,7 @@ export class WebhookEgress extends FInitableBase {
 	private static _extractHttpHeaders(message: Message.Data): OutgoingHttpHeaders {
 		const httpHeaders: OutgoingHttpHeaders = {};
 
-		for (const [msgHeader, value] of Object.entries(message.headers)) {
+		for (const [msgHeader, value] of Object.entries(message.messageHeaders)) {
 			if (msgHeader.startsWith(Message.HeaderPrefix.HTTP)) {
 				const httpHeader: string = msgHeader.substring(Message.HeaderPrefix.HTTP.length);
 				switch (httpHeader) {
@@ -150,7 +150,7 @@ export class WebhookEgress extends FInitableBase {
 	}
 
 	private static _extractHttpBody(message: Message.Data): Buffer {
-		return Buffer.from(message.body);
+		return Buffer.from(message.messageBody);
 	}
 }
 
