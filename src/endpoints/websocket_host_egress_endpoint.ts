@@ -117,22 +117,19 @@ class TextChannel extends EventChannelBase<string> implements FWebSocketChannelF
 
 	@Bind
 	private async _onMessage(executionContext: FExecutionContext, event: MessageBus.Channel.Event): Promise<void> {
-		// try {
 		const topicName: Topic["topicName"] = event.source.topicName;
-		const message: Message.Id & Message.Data = event.data;
-
-		await this._delivery(this.initExecutionContext, topicName, message);
-		// 	event.delivered = true;
-		// } catch (e) {
-		// 	event.delivered = false;
-		// 	console.error(e);
-		// }
+		const message: Message = event.data;
+		await this._delivery(
+			this.initExecutionContext, // TODO: Why do we using this.initExecutionContext instead executionContext?
+			topicName,
+			message
+		);
 	}
 
 	private async _delivery(
 		executionContext: FExecutionContext,
 		topicName: Topic["topicName"],
-		message: Message.Id & Message.Data
+		message: Message
 	): Promise<void> {
 		const mediaType: string = message.messageMediaType;
 		const messageBody: Buffer = Buffer.from(message.messageBody);
@@ -147,7 +144,12 @@ class TextChannel extends EventChannelBase<string> implements FWebSocketChannelF
 			jsonrpc: "2.0",
 			method: topicName,
 			id: message.messageId,
-			params: { mediaType, headers: message.messageHeaders, data }
+			params: {
+				mediaType,
+				headers: message.messageHeaders,
+				data,
+				labels: message.messageLabels.map(l => ({ id: l.labelId, value: l.labelValue }))
+			}
 		});
 
 		await this.notify(executionContext, { data: messageStr });

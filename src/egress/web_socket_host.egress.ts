@@ -1,7 +1,7 @@
 import { FExceptionArgument, FExecutionContext, FInitableBase, FLogger } from "@freemework/common";
 import { FWebServer } from "@freemework/hosting";
 
-import { WebSocketHostEgressEndpoint } from "../endpoints/websocket_host_subscriber_endpoint";
+import { WebSocketHostEgressEndpoint } from "../endpoints/websocket_host_egress_endpoint";
 import { MessageBus } from "../messaging/message_bus";
 import { EgressIdentifier } from "../model";
 

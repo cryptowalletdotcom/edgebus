@@ -90,7 +90,7 @@ export class MessageBusBull extends MessageBusBase {
 					ingressBodyJson: message.messageMediaType === MIME_APPLICATION_JSON ? JSON.parse(Buffer.from(message.messageIngressBody).toString()) : null,
 					body: Buffer.from(message.messageBody).toString("base64"),
 					bodyJson: message.messageMediaType === MIME_APPLICATION_JSON ? JSON.parse(Buffer.from(message.messageBody).toString()) : null,
-					labels: message.messageLabels.map(l => ({ id: l.labelId.value, value: l.labelValue }))
+					labels: message.messageLabels.map(l => ({ id: l.labelId, value: l.labelValue }))
 				}
 			},
 			this._bullJobOpts

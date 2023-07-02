@@ -14,13 +14,13 @@ import { Label } from "../model";
 
 export abstract class MessageBusBase extends MessageBus {
 
-	private readonly labelHandlers: Map<TopicIdentifier["uuid"], Array<LabelsHandlerBase>>;
+	private readonly labelHandlers: Map<TopicIdentifier, ReadonlyArray<LabelsHandlerBase>>;
 
 	public constructor(
 		protected readonly storage: DatabaseFactory,
 	) {
 		super();
-		this.labelHandlers = new Map<TopicIdentifier["uuid"], Array<LabelsHandlerBase>>();
+		this.labelHandlers = new Map();
 	}
 
 	protected async onInit(): Promise<void> {
@@ -37,15 +37,15 @@ export abstract class MessageBusBase extends MessageBus {
 			}
 
 			for (const labelHandler of labelHandlersList) {
-				if (this.labelHandlers.has(labelHandler.topicId.uuid)) {
-					const labelHandlers = this.labelHandlers.get(labelHandler.topicId.uuid);
-					if (!labelHandlers) {
-						throw new FExceptionInvalidOperation(`Can not get label handlers array for ${labelHandler.topicId.uuid}`);
-					}
-					labelHandlers.push(labelHandlerFactory(labelHandler))
-				} else {
-					this.labelHandlers.set(labelHandler.topicId.uuid, [labelHandlerFactory(labelHandler)]);
-				}
+				let labelHandlers: ReadonlyArray<LabelsHandlerBase> | undefined = this.labelHandlers.get(labelHandler.topicId);
+				if (labelHandlers === undefined) { labelHandlers = []; }
+				this.labelHandlers.set(
+					labelHandler.topicId,
+					Object.freeze([
+						labelHandlerFactory(labelHandler),
+						...labelHandlers
+					])
+				);
 			}
 		});
 	}
@@ -66,7 +66,7 @@ export abstract class MessageBusBase extends MessageBus {
 				const ingress: Ingress = await db.getIngress(executionContext, { ingressId });
 
 				const labelValues: Set<Label["labelValue"]> = new Set();
-				const labelHandlers: ReadonlyArray<LabelsHandlerBase> | undefined = this.labelHandlers.get(topic.topicId.uuid);
+				const labelHandlers: ReadonlyArray<LabelsHandlerBase> | undefined = this.labelHandlers.get(topic.topicId);
 				if (labelHandlers !== undefined) {
 					const exs: Array<FException> = [];
 					await Promise.all(

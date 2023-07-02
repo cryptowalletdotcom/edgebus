@@ -65,8 +65,8 @@ export namespace MessageBus {
 		// wakeUp(): void;
 	}
 	export namespace Channel {
-		export type Callback = FChannelEvent.Callback<Message.Id & Message.Data, Event>;
-		export interface Event extends FChannelEvent.Event<Message.Id & Message.Data> {
+		export type Callback = FChannelEvent.Callback<Message, Event>;
+		export interface Event extends FChannelEvent.Event<Message> {
 			readonly source: Channel;
 			deliveryEvidence?: any;
 		}

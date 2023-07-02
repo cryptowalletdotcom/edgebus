@@ -47,11 +47,11 @@ export const enum IdentifierPrefix {
  */
 export abstract class Identifier {
 	public abstract get prefix(): IdentifierPrefix;
-	public get value() {
-		const value = this.uuid.split("-").join("");
+	public get value(): string {
+		const value: string = this.uuid.split("-").join("");
 		return `${this.prefix}${value}`;
 	}
-	public get uuid() { return this._uuid; }
+	public get uuid(): string { return this._uuid; }
 	public toJSON(): string { return this.value; }
 	public toString(): string { return this.value; }
 
@@ -70,10 +70,7 @@ export abstract class Identifier {
 
 		return new identifierCls(instanceUuid);
 	}
-	/** 
-	 * Parse the an EdgeBus identifier parts.
-	 */
-	protected static parseIdentifierUuid(id: string, expectedPrefix: IdentifierPrefix): string {
+	protected static parseIdentifierUuid(id: string, expectedPrefix: IdentifierPrefix): Identifier["uuid"] {
 		if (id.length !== 36) {
 			throw new FExceptionArgument(`Wrong id value: ${id}. Expected 36 symbols`, "id");
 		}
@@ -103,6 +100,7 @@ export abstract class Identifier {
 
 		return uuidStr;
 	}
+
 	protected constructor(uuid?: string) {
 		Identifier.cleanup(); // Cleanup weak reference
 
@@ -167,26 +165,6 @@ class IngressIdentifierImpl extends IngressIdentifier {
 	public constructor(uuid?: string) { super(uuid); }
 }
 
-export abstract class MessageIdentifier extends Identifier {
-	public static generate(): MessageIdentifier { return new MessageIdentifierImpl(); }
-	public static fromUuid(uuid: string): MessageIdentifier { return Identifier.create(MessageIdentifierImpl, uuid); }
-	public static parse(id: string): MessageIdentifier { return Identifier.create(MessageIdentifierImpl, Identifier.parseIdentifierUuid(id, IdentifierPrefix.MESSAGE)); }
-	public get prefix(): IdentifierPrefix.MESSAGE { return IdentifierPrefix.MESSAGE; }
-}
-class MessageIdentifierImpl extends MessageIdentifier {
-	public constructor(uuid?: string) { super(uuid); }
-}
-
-export abstract class TopicIdentifier extends Identifier {
-	public static generate(): TopicIdentifier { return new TopicIdentifierImpl(); }
-	public static fromUuid(uuid: string): TopicIdentifier { return Identifier.create(TopicIdentifierImpl, uuid); }
-	public static parse(id: string): TopicIdentifier { return Identifier.create(TopicIdentifierImpl, Identifier.parseIdentifierUuid(id, IdentifierPrefix.TOPIC)); }
-	public get prefix(): IdentifierPrefix.TOPIC { return IdentifierPrefix.TOPIC; }
-}
-class TopicIdentifierImpl extends TopicIdentifier {
-	public constructor(uuid?: string) { super(uuid); }
-}
-
 export class LabelHandlerIdentifier extends Identifier {
 	public static generate(): LabelHandlerIdentifier { return new LabelHandlerIdentifierImpl(); }
 	public static fromUuid(uuid: string): LabelHandlerIdentifier { return Identifier.create(LabelHandlerIdentifierImpl, uuid); }
@@ -204,5 +182,25 @@ export class LabelIdentifier extends Identifier {
 	public get prefix(): IdentifierPrefix.LABEL { return IdentifierPrefix.LABEL; }
 }
 class LabelIdentifierImpl extends LabelIdentifier {
+	public constructor(uuid?: string) { super(uuid); }
+}
+
+export abstract class MessageIdentifier extends Identifier {
+	public static generate(): MessageIdentifier { return new MessageIdentifierImpl(); }
+	public static fromUuid(uuid: string): MessageIdentifier { return Identifier.create(MessageIdentifierImpl, uuid); }
+	public static parse(id: string): MessageIdentifier { return Identifier.create(MessageIdentifierImpl, Identifier.parseIdentifierUuid(id, IdentifierPrefix.MESSAGE)); }
+	public get prefix(): IdentifierPrefix.MESSAGE { return IdentifierPrefix.MESSAGE; }
+}
+class MessageIdentifierImpl extends MessageIdentifier {
+	public constructor(uuid?: string) { super(uuid); }
+}
+
+export abstract class TopicIdentifier extends Identifier {
+	public static generate(): TopicIdentifier { return new TopicIdentifierImpl(); }
+	public static fromUuid(uuid: string): TopicIdentifier { return Identifier.create(TopicIdentifierImpl, uuid); }
+	public static parse(id: string): TopicIdentifier { return Identifier.create(TopicIdentifierImpl, Identifier.parseIdentifierUuid(id, IdentifierPrefix.TOPIC)); }
+	public get prefix(): IdentifierPrefix.TOPIC { return IdentifierPrefix.TOPIC; }
+}
+class TopicIdentifierImpl extends TopicIdentifier {
 	public constructor(uuid?: string) { super(uuid); }
 }
