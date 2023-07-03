@@ -24,22 +24,41 @@ export class ExternalLabelsHandler extends LabelsHandlerBase {
 	): Promise<Array<string>> {
 		return new Promise((resolve, reject) => {
 			const cmd = spawn(this.getLabelHandlerFullPath(this.externalProcessPath));
+			const dataBuffer: Array<Buffer> = [];
+			const errorBuffer: Array<Buffer> = [];
 
-			cmd.stderr.on('data', (data) => {
-				this.log.error(executionContext, data.toString());
+			cmd.stderr.on("data", (data) => {
+				errorBuffer.push(Buffer.from(data));
 			});
 
-			cmd.stdout.on('data', (data) => {
-				const result = JSON.parse(data.toString());
-				resolve(ensure.array(result));
+			cmd.stdout.on("data", (data) => {
+				dataBuffer.push(Buffer.from(data));
 			});
 
-			cmd.once('error', (error) => {
-				this.log.error(executionContext, error.toString());
-				reject(error);
+			cmd.once("close", (code) => {
+				if (code === 0) {
+					const dataStr = Buffer.concat(dataBuffer).toString();
+					this.log.info(executionContext, dataStr);
+					try {
+						const dataRaw = JSON.parse(dataStr);
+						const data = ensure.array(dataRaw);
+						const result: Array<string> = [];
+						for (const item of data) {
+							result.push(ensure.string(item));
+						}
+
+						resolve(result);
+					} catch (e) {
+						reject(e);
+					}
+				} else {
+					const errorStr = Buffer.concat(errorBuffer).toString();
+					reject(errorStr);
+				}
 			});
 
-			cmd.stdin?.write(JSON.stringify(message));
+			const msgBodyStr = message.messageBody.toString();
+			cmd.stdin?.write(msgBodyStr);
 			cmd.stdin?.end();
 		});
 	}
