@@ -6,17 +6,6 @@ import { Label } from "../model/label";
 import { LabelHandler } from "../model/label_handler";
 
 export abstract class Database extends FInitableBase {
-
-	/**
-	 * @deprecated
-	 * @todo Move this functionality into createMessage
-	 */
-	public abstract bindLabelToMessage(
-		executionContext: FExecutionContext,
-		message: Message.Id,
-		label: Label.Id
-	): Promise<void>;
-
 	public abstract createDelivery(
 		executionContext: FExecutionContext,
 		deliveryData: Partial<Delivery.Id> & Delivery.Data

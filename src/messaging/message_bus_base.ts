@@ -100,12 +100,7 @@ export abstract class MessageBusBase extends MessageBus {
 					message.messageBody,
 					labels
 				);
-
-				// TODO Remove
-				for (const label of labels) {
-					await db.bindLabelToMessage(executionContext, messageInstance, label);
-				}
-
+				
 				await this.onPublish(executionContext, ingress, topic, messageInstance);
 			}
 		);
@@ -152,6 +147,10 @@ export abstract class MessageBusBase extends MessageBus {
 		);
 	}
 
+	protected async matchLabels(): Promise<boolean> {
+		throw new Error("Not implemeted yet");
+	}
+
 	protected abstract onPublish(
 		executionContext: FExecutionContext,
 		ingress: Ingress,
@@ -174,4 +173,5 @@ export abstract class MessageBusBase extends MessageBus {
 		topic: Topic,
 		egress: Egress
 	): Promise<MessageBus.Channel>;
+	
 }

@@ -23,9 +23,9 @@ export class PostgresDatabase extends SqlDatabase {
 		super(sqlConnectionFactory);
 	}
 
-	public async bindLabelToMessage(
+	private async bindLabelToMessage(
 		executionContext: FExecutionContext,
-		message: Message.Id,
+		messageId: string,
 		label: Label.Id
 	): Promise<void> {
 		await this.sqlConnection
@@ -39,7 +39,7 @@ export class PostgresDatabase extends SqlDatabase {
 			.execute(
 				executionContext,
 				/* 1 */label.labelId.uuid,
-				/* 2 */message.messageId.uuid,
+				/* 2 */messageId,
 			);
 	}
 
@@ -302,7 +302,9 @@ export class PostgresDatabase extends SqlDatabase {
 			`)
 			.execute(executionContext, messageDbId);
 
-
+		for (const label of labels) {
+			await this.bindLabelToMessage(executionContext, messageDbId, label);
+		}
 
 		return PostgresDatabase._mapCreatedMessageDbRow(messageResultRecord, labels);
 	}
