@@ -7,7 +7,8 @@ import path = require("path");
 const ensure: FEnsure = FEnsure.create();
 
 export class ExternalLabelsHandler extends LabelsHandlerBase {
-	private static readonly LABEL_HANDLERS_FOLDER = "label_handlers"
+	private static readonly LABEL_HANDLERS_FOLDER = "label_handlers";
+	private readonly timeoutMs;
 
 	private readonly externalProcessPath: LabelHandler.ExternalProcess["externalProcessPath"];
 	private readonly log: FLogger;
@@ -16,6 +17,9 @@ export class ExternalLabelsHandler extends LabelsHandlerBase {
 		super();
 		this.externalProcessPath = externalProcessPath;
 		this.log = FLogger.create(ExternalLabelsHandler.name);
+
+		// TODO Move to configuration in db
+		this.timeoutMs = 15 * 1000;
 	}
 
 	public execute(
@@ -27,15 +31,15 @@ export class ExternalLabelsHandler extends LabelsHandlerBase {
 			const dataBuffer: Array<Buffer> = [];
 			const errorBuffer: Array<Buffer> = [];
 
-			cmd.stderr.on("data", (data) => {
+			cmd.stderr.on("data", (data: any) => {
 				errorBuffer.push(Buffer.from(data));
 			});
 
-			cmd.stdout.on("data", (data) => {
+			cmd.stdout.on("data", (data: any) => {
 				dataBuffer.push(Buffer.from(data));
 			});
 
-			cmd.once("close", (code) => {
+			cmd.once("close", (code: number | null) => {
 				if (code === 0) {
 					const dataStr = Buffer.concat(dataBuffer).toString();
 					this.log.info(executionContext, dataStr);
@@ -58,8 +62,13 @@ export class ExternalLabelsHandler extends LabelsHandlerBase {
 			});
 
 			const msgBodyStr = message.messageBody.toString();
-			cmd.stdin?.write(msgBodyStr);
-			cmd.stdin?.end();
+			if (!cmd.stdin) {
+				cmd.kill();
+				// reject();
+			} else {
+				cmd.stdin.write(msgBodyStr);
+				cmd.stdin.end();
+			}
 		});
 	}
 
