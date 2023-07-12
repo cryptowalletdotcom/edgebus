@@ -16,11 +16,30 @@ import { Delivery, Egress, Ingress, Message, Topic, ensureEgressKind, ensureIngr
 import { SqlDatabase } from "../sql_database";
 import { Database } from "../database";
 import { Label } from "../../model/label";
-import { LabelHandler, ensureLabelHandlerKind } from "../../model/label_handler";
+import { LabelHandler } from "../../model/label_handler";
 
 export class PostgresDatabase extends SqlDatabase {
 	public constructor(sqlConnectionFactory: FSqlConnectionFactoryPostgres) {
 		super(sqlConnectionFactory);
+	}
+	private async bindLabelToEgress(
+		executionContext: FExecutionContext,
+		egressId: EgressIdentifier,
+		labelId: LabelIdentifier
+	): Promise<void> {
+		await this.sqlConnection
+			.statement(`
+			INSERT INTO "tb_egress_label" ("label_id", "egress_id")
+				VALUES (
+					(SELECT "id" FROM "tb_label" WHERE "api_uuid" = $1), 
+					(SELECT "id" FROM "tb_egress" WHERE "api_uuid" = $2)
+				)
+			`)
+			.execute(
+				executionContext,
+				/* 1 */labelId.uuid,
+				/* 2 */egressId.uuid,
+			);
 	}
 
 	private async bindLabelToMessage(
@@ -42,6 +61,7 @@ export class PostgresDatabase extends SqlDatabase {
 				/* 2 */messageId,
 			);
 	}
+
 
 	public async createDelivery(
 		executionContext: FExecutionContext,
@@ -180,7 +200,11 @@ export class PostgresDatabase extends SqlDatabase {
 				/* 2 */egressData.egressTopicIds.map(s => s.uuid)
 			);
 
-		const egressModel: Egress = PostgresDatabase._mapEgressDbRow(egressMainRecord, egressExtRecord, egressData.egressTopicIds);
+		for (const labelId of egressData.egressLabelIds) {
+			await this.bindLabelToEgress(executionContext, egressId, labelId);
+		}
+
+		const egressModel: Egress = PostgresDatabase._mapEgressDbRow(egressMainRecord, egressExtRecord, egressData.egressLabelIds, egressData.egressTopicIds);
 		return egressModel;
 	}
 
@@ -438,7 +462,13 @@ export class PostgresDatabase extends SqlDatabase {
 						FROM "tb_egress_topic" AS ET
 						INNER JOIN "tb_topic" AS T ON T."id" = ET."topic_id"
 						WHERE ET."egress_id" = E."id"
-					)::JSONB AS "topic_uuids"
+					)::JSONB AS "topic_uuids",
+					(
+						SELECT json_agg("api_uuid")
+						FROM "tb_egress_label" AS EL
+						INNER JOIN "tb_label" AS L ON L."id" = EL."label_id"
+						WHERE EL."egress_id" = E."id"
+					)::JSONB AS "label_uuids"
 				FROM "tb_egress" AS E
 				WHERE ${conditionStatements.map((condition) => `(${condition})`).join(" AND ")}
 			`)
@@ -755,6 +785,12 @@ export class PostgresDatabase extends SqlDatabase {
 						INNER JOIN "tb_topic" AS T ON T."id" = ET."topic_id"
 						WHERE ET."egress_id" = E."id"
 					)::JSONB AS "topic_uuids",
+					(
+						SELECT json_agg("api_uuid")
+						FROM "tb_egress_label" AS EL
+						INNER JOIN "tb_label" AS L ON L."id" = EL."label_id"
+						WHERE EL."egress_id" = E."id"
+					)::JSONB AS "label_uuids",
 					EW."http_url" AS "webhook_http_url",
 					EW."http_method" AS "webhook_http_method"
 				FROM "tb_egress" AS E
@@ -1011,7 +1047,8 @@ export class PostgresDatabase extends SqlDatabase {
 	private static _mapEgressDbRow(
 		egressMainRecord: FSqlResultRecord,
 		egressExtRecord: FSqlResultRecord,
-		egressTopics?: ReadonlyArray<TopicIdentifier>
+		egressLabels?: ReadonlyArray<LabelIdentifier>,
+		egressTopics?: ReadonlyArray<TopicIdentifier>,
 	): Egress {
 		const egressUuid: string = egressMainRecord.get("api_uuid").asString;
 		const egressKind: string = egressMainRecord.get("kind").asString;
@@ -1031,11 +1068,23 @@ export class PostgresDatabase extends SqlDatabase {
 			}
 		}
 
+		if (egressLabels === undefined) {
+			try {
+				const egressLabelUuids: Array<string> | null = egressMainRecord.get("label_uuids").asObjectNullable;
+				egressLabels = egressLabelUuids !== null
+					? egressLabelUuids.map(LabelIdentifier.fromUuid)
+					: [];
+			} catch (e) {
+				throw e;
+			}
+		}
+
 		const egressBase: Egress.Id & Omit<Egress.DataBase, "egressKind"> & Egress.Instance = {
 			egressId: EgressIdentifier.fromUuid(egressUuid),
 			egressTopicIds: egressTopics,
 			egressCreatedAt: egressCreatedAt,
 			egressDeletedAt: egressDeletedAt,
+			egressLabelIds: egressLabels
 		};
 
 		switch (egressKind) {

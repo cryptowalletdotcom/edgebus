@@ -4,6 +4,7 @@ export namespace Delivery {
 	export const enum Status {
 		Success = "SUCCESS",
 		Failure = "FAILURE",
+		Skip = "SKIP"
 	}
 
 	export interface Id {
@@ -11,7 +12,8 @@ export namespace Delivery {
 	}
 	export type Data =
 		| Data.Success
-		| Data.Failure;
+		| Data.Failure
+		| Data.Skip;
 	export namespace Data {
 		export interface Base {
 			readonly egressId: EgressIdentifier;
@@ -26,6 +28,9 @@ export namespace Delivery {
 		export interface Failure extends Base {
 			readonly status: Status.Failure;
 			readonly failure_evidence: any;
+		}
+		export interface Skip extends Base {
+			readonly status: Status.Skip;
 		}
 	}
 

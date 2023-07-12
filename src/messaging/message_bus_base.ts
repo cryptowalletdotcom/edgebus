@@ -15,12 +15,14 @@ import { Label } from "../model";
 export abstract class MessageBusBase extends MessageBus {
 
 	private readonly labelHandlers: Map<TopicIdentifier, ReadonlyArray<LabelsHandlerBase>>;
+	private readonly egressLabels: Map<EgressIdentifier, ReadonlyArray<Label>>;
 
 	public constructor(
 		protected readonly storage: DatabaseFactory,
 	) {
 		super();
 		this.labelHandlers = new Map();
+		this.egressLabels = new Map<EgressIdentifier, ReadonlyArray<Label>>();
 	}
 
 	protected async onInit(): Promise<void> {
@@ -100,7 +102,7 @@ export abstract class MessageBusBase extends MessageBus {
 					message.messageBody,
 					labels
 				);
-				
+
 				await this.onPublish(executionContext, ingress, topic, messageInstance);
 			}
 		);
@@ -142,9 +144,37 @@ export abstract class MessageBusBase extends MessageBus {
 			async (db) => {
 				const topic: Topic = await db.getTopic(executionContext, { topicId });
 				const egress: Egress = await db.getEgress(executionContext, { egressId });
+
+				if (!this.egressLabels.has(egress.egressId)) {
+					const labels: Array<Label> = [];
+					for (const labelId of egress.egressLabelIds) {
+						const label: Label | null = await db.findLabel(executionContext, { labelId });
+						if (label === null) {
+							throw new FException(`Can not find label ${labelId.toString()}`);
+						}
+						labels.push(label);
+					}
+					this.egressLabels.set(egress.egressId, Object.freeze(labels))
+				}
+
 				return await this.onRetainChannel(executionContext, topic, egress);
 			}
 		);
+	}
+
+	protected matchLabels(egressId: EgressIdentifier, messageLabels: ReadonlyArray<Label>): boolean {
+		const egressLabels: ReadonlyArray<Label> | undefined = this.egressLabels.get(egressId);
+		if (egressLabels === undefined) {
+			return true;
+		}
+
+		const messageLabelValues: Array<string> = messageLabels.map(e => e.labelValue);
+		for (const egressLabel of egressLabels) {
+			if (!messageLabelValues.includes(egressLabel.labelValue)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	protected abstract onPublish(
@@ -169,5 +199,5 @@ export abstract class MessageBusBase extends MessageBus {
 		topic: Topic,
 		egress: Egress
 	): Promise<MessageBus.Channel>;
-	
+
 }

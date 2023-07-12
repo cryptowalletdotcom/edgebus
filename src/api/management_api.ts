@@ -28,13 +28,13 @@ export class ManagementApi extends FInitableBase {
 	}
 
 	public async createEgress(
-		executionContext: FExecutionContext, ingressData: Partial<Egress.Id> & Egress.Data
+		executionContext: FExecutionContext, egressData: Partial<Egress.Id> & Egress.Data
 	): Promise<Egress> {
 		this.verifyInitializedAndNotDisposed();
 
 		const fullEgressData: Egress.Id & Egress.Data = {
-			...ingressData,
-			egressId: ingressData.egressId ?? EgressIdentifier.generate(),
+			...egressData,
+			egressId: egressData.egressId ?? EgressIdentifier.generate(),
 		};
 
 		const egress: Egress = await this._db.createEgress(
@@ -90,6 +90,21 @@ export class ManagementApi extends FInitableBase {
 		return labelHandlerId;
 	}
 
+
+	public async getOrCreateLabel(
+		executionContext: FExecutionContext, labelValue: Label.Data["labelValue"]
+	): Promise<Label> {
+		this.verifyInitializedAndNotDisposed();
+
+		const label: Label| null = await this._db.findLabelByValue(executionContext, labelValue);
+		if (label !== null) {
+			return label;
+		}
+		const newLabel =this._db.createLabel(executionContext, {labelValue});
+
+		this._log.debug(executionContext, () => `Exit createLabelHandler with data: ${JSON.stringify(labelValue)}`);
+		return newLabel;
+	}
 
 	public async createTopic(
 		executionContext: FExecutionContext, topicData: Partial<Topic.Id> & Topic.Data

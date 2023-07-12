@@ -2,7 +2,7 @@ import { FConfiguration, FException, FExceptionInvalidOperation, FUtilUnreadonly
 import { FHostingConfiguration } from "@freemework/hosting";
 
 import { Router } from "express-serve-static-core";
-import { Ingress as IngressModel, Egress as EgressModel, LabelHandler as LabelHandlerModel } from "./model";
+import { Ingress as IngressModel, Egress as EgressModel, LabelHandler as LabelHandlerModel, Label } from "./model";
 import { existsSync, readFileSync } from "fs";
 
 export class Settings {
@@ -213,6 +213,7 @@ export namespace Settings {
 				 * API Identifiers of source topics
 				 */
 				readonly sourceTopicIds: ReadonlyArray<string>;
+				readonly labels: ReadonlyArray<Label.Data["labelValue"]>
 			}
 
 			export interface Webhook extends Base {
@@ -437,7 +438,19 @@ function parseSetup(setupConfiguration: FConfiguration): Settings.Setup | null {
 				const egressId: string = subscriberConfiguration.get("index").asString;
 				const type: string = subscriberConfiguration.get("kind").asString;
 				const sourceTopicIds: string = subscriberConfiguration.get("source_topic_ids").asString;
-				const baseSubscriberSettings =  { egressId, sourceTopicIds: sourceTopicIds.split(" ").filter(w => w !== "") };
+				const labels: Array<string> = (() => {
+					if (subscriberConfiguration.has("labels")) {
+						const labels: string = subscriberConfiguration.get("labels").asString;
+						return labels.split(" ").filter(w => w !== "");
+					} else { 
+						return [];
+					}
+				})();
+				const baseSubscriberSettings = {
+					egressId,
+					sourceTopicIds: sourceTopicIds.split(" ").filter(w => w !== ""),
+					labels
+				};
 				let subscriberSettings: Settings.Setup.Egress;
 				switch (type) {
 					case EgressModel.Kind.Webhook:
@@ -470,7 +483,7 @@ function parseSetup(setupConfiguration: FConfiguration): Settings.Setup | null {
 				const name: string = topicConfiguration.get("name").asString;
 				const description: string = topicConfiguration.get("description").asString;
 				const mediaType: string = topicConfiguration.get("mediaType").asString;
-				
+
 				const labelHandlers: Array<Settings.Setup.LabelHandler> = []
 				const labelHandlerKey: string = "labelHandler";
 				if (topicConfiguration.hasNamespace(labelHandlerKey)) {

@@ -1,4 +1,4 @@
-import { FException, FExceptionAggregate, FExceptionInvalidOperation, FExecutionContext } from "@freemework/common";
+import { FConfigurationException, FException, FExceptionAggregate, FExceptionInvalidOperation, FExecutionContext } from "@freemework/common";
 
 import { DoneCallback, Job, JobOptions, Queue } from "bull";
 import * as Bull from "bull";
@@ -126,6 +126,7 @@ export class MessageBusBull extends MessageBusBase {
 			this._channels.set(egress.egressId.value, new Map());
 		}
 		this._channels.get(egress.egressId.value)!.set(topic.topicId.value, channel);
+
 		return channel;
 	}
 
@@ -269,7 +270,11 @@ export class MessageBusBull extends MessageBusBase {
 								source: channel,
 								data: message
 							};
-							await channel.notify(executionContext, event);
+
+							const isMatchLabels: boolean = this.matchLabels(egressId, message.messageLabels);
+							if (isMatchLabels) {
+								await channel.notify(executionContext, event);
+							}
 
 							await db.removeEgressMessageQueue(
 								executionContext, { egressId, topicId, messageId }
@@ -279,7 +284,7 @@ export class MessageBusBull extends MessageBusBase {
 								egressId,
 								topicId,
 								messageId,
-								status: Delivery.Status.Success,
+								status: isMatchLabels ? Delivery.Status.Success : Delivery.Status.Skip,
 								successEvidence: event.deliveryEvidence ?? null
 							});
 

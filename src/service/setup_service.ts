@@ -8,7 +8,7 @@ import {
 	EgressIdentifier, Egress,
 	IngressIdentifier, Ingress,
 	LabelHandlerIdentifier,
-	TopicIdentifier, Topic
+	TopicIdentifier, Topic, LabelIdentifier
 } from "../model";
 
 
@@ -141,6 +141,11 @@ export class SetupServiceImpl implements SetupService {
 		for (const setupEgress of setupSettings.egresses) {
 			const egressId: EgressIdentifier = EgressIdentifier.parse(setupEgress.egressId);
 			const egressTopicIds: Array<TopicIdentifier> = setupEgress.sourceTopicIds.map(TopicIdentifier.parse);
+			const labelIds: Array<LabelIdentifier> = [];
+
+			for (const label of setupEgress.labels) {
+				labelIds.push((await managementApi.getOrCreateLabel(executionContext, label)).labelId);
+			}
 
 			const egress: Egress | null = await managementApi.findEgress(executionContext, egressId);
 			if (egress !== null) {
@@ -152,7 +157,8 @@ export class SetupServiceImpl implements SetupService {
 					case Egress.Kind.WebSocketHost:
 						egressData = {
 							egressKind: setupEgress.kind,
-							egressTopicIds: egressTopicIds
+							egressTopicIds: egressTopicIds,
+							egressLabelIds: labelIds
 						};
 						break;
 					case Egress.Kind.Webhook:
@@ -160,7 +166,8 @@ export class SetupServiceImpl implements SetupService {
 							egressKind: setupEgress.kind,
 							egressTopicIds: egressTopicIds,
 							egressHttpMethod: setupEgress.method,
-							egressHttpUrl: setupEgress.url
+							egressHttpUrl: setupEgress.url,
+							egressLabelIds: labelIds
 						}
 						break;
 					default:

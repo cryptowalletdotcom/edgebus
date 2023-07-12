@@ -1,6 +1,6 @@
 import { FException } from "@freemework/common";
 
-import { EgressIdentifier, TopicIdentifier } from "./identifiers";
+import { EgressIdentifier, LabelIdentifier, TopicIdentifier } from "./identifiers";
 
 export namespace Egress {
 	export const enum Kind {
@@ -32,6 +32,8 @@ export namespace Egress {
 		readonly egressTopicIds: ReadonlyArray<TopicIdentifier>;
 
 		readonly egressKind: Kind;
+
+		readonly egressLabelIds: ReadonlyArray<LabelIdentifier>;
 		// readonly egressConverters: ReadonlyArray<Converter>;
 	}
 
