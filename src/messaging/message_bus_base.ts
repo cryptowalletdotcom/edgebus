@@ -147,10 +147,6 @@ export abstract class MessageBusBase extends MessageBus {
 		);
 	}
 
-	protected async matchLabels(): Promise<boolean> {
-		throw new Error("Not implemeted yet");
-	}
-
 	protected abstract onPublish(
 		executionContext: FExecutionContext,
 		ingress: Ingress,
