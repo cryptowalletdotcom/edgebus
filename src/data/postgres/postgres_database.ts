@@ -33,7 +33,7 @@ export class PostgresDatabase extends SqlDatabase {
 			INSERT INTO "tb_message_label" ("label_id", "message_id")
 				VALUES (
 					(SELECT "id" FROM "tb_label" WHERE "api_uuid" = $1), 
-					(SELECT "id" FROM "tb_message" WHERE "api_uuid" = $2)
+					$2
 				)
 			`)
 			.execute(

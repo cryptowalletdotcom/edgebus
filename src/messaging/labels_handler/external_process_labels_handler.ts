@@ -1,24 +1,18 @@
-import { FEnsure, FExecutionContext, FLogger } from "@freemework/common";
+import { FExecutionContext } from "@freemework/common";
 import { LabelHandler, Message } from "../../model";
 import { LabelsHandlerBase } from "./labels_handler_base";
-import { spawn } from "child_process";
 import path = require("path");
+import { ExternalProcess } from "./external_process";
 
-const ensure: FEnsure = FEnsure.create();
 
 export class ExternalLabelsHandler extends LabelsHandlerBase {
 	private static readonly LABEL_HANDLERS_FOLDER = "label_handlers";
 	private readonly timeoutMs;
-
 	private readonly externalProcessPath: LabelHandler.ExternalProcess["externalProcessPath"];
-	private readonly log: FLogger;
 
 	constructor(externalProcessPath: LabelHandler.ExternalProcess["externalProcessPath"]) {
 		super();
 		this.externalProcessPath = externalProcessPath;
-		this.log = FLogger.create(ExternalLabelsHandler.name);
-
-		// TODO Move to configuration in db
 		this.timeoutMs = 15 * 1000;
 	}
 
@@ -26,53 +20,11 @@ export class ExternalLabelsHandler extends LabelsHandlerBase {
 		executionContext: FExecutionContext,
 		message: Message.Id & Message.Data
 	): Promise<Array<string>> {
-		return new Promise((resolve, reject) => {
-			const cmd = spawn(this.getLabelHandlerFullPath(this.externalProcessPath));
-			const dataBuffer: Array<Buffer> = [];
-			const errorBuffer: Array<Buffer> = [];
-
-			cmd.stderr.on("data", (data: any) => {
-				errorBuffer.push(Buffer.from(data));
-			});
-
-			cmd.stdout.on("data", (data: any) => {
-				dataBuffer.push(Buffer.from(data));
-			});
-
-			cmd.once("close", (code: number | null) => {
-				if (code === 0) {
-					const dataStr = Buffer.concat(dataBuffer).toString();
-					this.log.info(executionContext, dataStr);
-					try {
-						const dataRaw = JSON.parse(dataStr);
-						const data = ensure.array(dataRaw);
-						const result: Array<string> = [];
-						for (const item of data) {
-							result.push(ensure.string(item));
-						}
-
-						resolve(result);
-					} catch (e) {
-						reject(e);
-					}
-				} else {
-					const errorStr = Buffer.concat(errorBuffer).toString();
-					reject(errorStr);
-				}
-			});
-
-			const msgBodyStr = message.messageBody.toString();
-			if (!cmd.stdin) {
-				cmd.kill();
-				// reject();
-			} else {
-				cmd.stdin.write(msgBodyStr);
-				cmd.stdin.end();
-			}
-		});
+		const newExternalProcess = new ExternalProcess(this.getLabelHandlerFullPath(this.externalProcessPath), this.timeoutMs);
+		return newExternalProcess.execute(executionContext, message);
 	}
 
-	private getLabelHandlerFullPath(labelHandlerPath: string) {
+	private getLabelHandlerFullPath(labelHandlerPath: string): string {
 		const fullPath = path.join(process.cwd(), ExternalLabelsHandler.LABEL_HANDLERS_FOLDER, labelHandlerPath);
 		return fullPath;
 	}
