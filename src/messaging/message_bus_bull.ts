@@ -1,4 +1,4 @@
-import { FConfigurationException, FException, FExceptionAggregate, FExceptionInvalidOperation, FExecutionContext } from "@freemework/common";
+import { FConfigurationException, FException, FExceptionAggregate, FExceptionInvalidOperation, FExecutionContext, FLogger } from "@freemework/common";
 
 import { DoneCallback, Job, JobOptions, Queue } from "bull";
 import * as Bull from "bull";
@@ -27,6 +27,8 @@ import { Delivery } from "../model";
  * See: https://www.npmjs.com/package/bull
  */
 export class MessageBusBull extends MessageBusBase {
+	private readonly log: FLogger;
+
 	public get serverAdapterRouter() {
 		return this._serverAdapter.getRouter();
 	}
@@ -38,6 +40,8 @@ export class MessageBusBull extends MessageBusBase {
 		// temporary passed (should be initialized inside)
 	) {
 		super(storage);
+
+		this.log = FLogger.create(MessageBusBull.name);
 
 		const db: number = Number.parseInt(redisUrl.pathname.substring(1) ?? '0');
 		const port: number = Number.parseInt(redisUrl.port ?? '6379');
@@ -310,7 +314,24 @@ export class MessageBusBull extends MessageBusBase {
 					});
 				}
 				catch (e) {
-					done(FException.wrapIfNeeded(e));
+					const inputData = (() => {
+						try {
+							const topicId: TopicIdentifier = TopicIdentifier.parse(job.data.topicId);
+							const egressId: EgressIdentifier = EgressIdentifier.parse(job.data.egressId);
+							const messageId: MessageIdentifier = MessageIdentifier.parse(job.data.message.id);
+							return { topicId, egressId, messageId }
+						} catch (e2) {
+							return null;
+						}
+					})();
+
+					const wrappedException: FException = FException.wrapIfNeeded(e);
+					const errMsg = inputData
+						? `Filed delivery message ${inputData.messageId}, topic ${inputData.topicId}, egress ${inputData.egressId}`
+						: 'Filed parse job for delivery';
+					this.log.info(executionContext, errMsg);
+					this.log.debug(executionContext, errMsg, wrappedException);
+					done(wrappedException);
 				}
 			})()
 		);
