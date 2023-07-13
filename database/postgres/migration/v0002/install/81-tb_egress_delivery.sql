@@ -16,9 +16,6 @@ CREATE TABLE "{{database.schema.runtime.name}}"."tb_egress_delivery" (
 	CONSTRAINT "uq__tb_egress_delivery__api_uuid"
 	UNIQUE ("api_uuid"),
 
-	CONSTRAINT "ck__tb_egress_delivery__evidence"
-	CHECK (("status" = 'SUCCESS' AND "success_evidence" IS NOT NULL) OR ("status" = 'FAILURE' AND "failure_evidence" IS NOT NULL)),
-
 	CONSTRAINT "fk__tb_egress_message_queue__tb_egress"
 	FOREIGN KEY ("egress_id")
 	REFERENCES "{{database.schema.runtime.name}}"."tb_egress" ("id"),
@@ -44,12 +41,5 @@ CREATE TABLE "{{database.schema.runtime.name}}"."tb_egress_delivery" (
 	REFERENCES "{{database.schema.runtime.name}}"."tb_egress_topic" ("id", "egress_id", "topic_id")
 );
 
-CREATE UNIQUE INDEX "uq__tb_egress_delivery__success"
-ON "{{database.schema.runtime.name}}"."tb_egress_delivery" ("message_id", "egress_id")
-WHERE "status" = 'SUCCESS';
-
 GRANT INSERT ON TABLE "{{database.schema.runtime.name}}"."tb_egress_delivery" TO "{{database.user.api}}";
 GRANT SELECT ON TABLE "{{database.schema.runtime.name}}"."tb_egress_delivery" TO "{{database.user.api}}";
-
-COMMENT ON INDEX "{{database.schema.runtime.name}}"."uq__tb_egress_delivery__success"
-IS 'Only one success message for an engress.';
