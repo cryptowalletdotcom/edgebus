@@ -111,8 +111,8 @@ export class PostgresDatabase extends SqlDatabase {
 				/* 3 */deliveryData.topicId.uuid,
 				/* 4 */deliveryData.messageId.uuid,
 				/* 5 */deliveryData.status,
-				/* 6 */JSON.stringify(deliveryData.status === Delivery.Status.Success ? deliveryData.successEvidence : null),
-				/* 7 */JSON.stringify(deliveryData.status === Delivery.Status.Failure ? deliveryData.failure_evidence : null),
+				/* 6 */deliveryData.status === Delivery.Status.Success ? JSON.stringify(deliveryData.successEvidence) : null,
+				/* 7 */deliveryData.status === Delivery.Status.Failure ? JSON.stringify(deliveryData.failure_evidence) : null,
 			);
 
 		const deliveryModel: Delivery = {
