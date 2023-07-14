@@ -1,6 +1,7 @@
-import { FEnsure, FExecutionContext, FLogger } from "@freemework/common";
-import { spawn } from "child_process";
+import { FEnsure, FEnsureException, FException, FExecutionContext, FLogger } from "@freemework/common";
+import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import { Message } from "../../model";
+import { ExternalProcessException, ExternalProcessExceptionCannotSpawn, ExternalProcessExceptionKilled, ExternalProcessExceptionParse, ExternalProcessExceptionTimeout, ExternalProcessExceptionUnexpectedExitCode } from "./external_process_exception";
 
 const ensure: FEnsure = FEnsure.create();
 
@@ -22,7 +23,12 @@ export class ExternalProcess {
 		message: Message.Id & Message.Data
 	): Promise<Array<string>> {
 		return new Promise((resolve, reject) => {
-			const cmd = spawn(this.path);
+			const cmd: ChildProcessWithoutNullStreams | ExternalProcessExceptionCannotSpawn = runSpawn(this.path);
+			if (cmd instanceof ExternalProcessExceptionCannotSpawn) {
+				reject(cmd);
+				return;
+			}
+
 			const dataBuffer: Array<Buffer> = [];
 			const errorBuffer: Array<Buffer> = [];
 
@@ -37,7 +43,6 @@ export class ExternalProcess {
 			cmd.once("close", (code: number | null) => {
 				if (code === 0) {
 					const dataStr = Buffer.concat(dataBuffer).toString();
-					this.log.info(executionContext, dataStr);
 					try {
 						const dataRaw = JSON.parse(dataStr);
 						const data = ensure.array(dataRaw);
@@ -54,19 +59,21 @@ export class ExternalProcess {
 						if (this.timeout) {
 							clearTimeout(this.timeout);
 						}
-						reject(e);
+						if (e instanceof FEnsureException) {
+							reject(new ExternalProcessExceptionParse('Parse error. Expected json array of strings from external label handler. ', FException.wrapIfNeeded(e)))
+						} else {
+							reject(new ExternalProcessException('Unexpected exception.', FEnsureException.wrapIfNeeded(e)));
+						}
 					}
 				} else {
-					const errorStr = cmd.killed ?
-						`External process killed` :
-						`External process close with code: ${code}. ${Buffer.concat(errorBuffer).toString()}`;
-
-					this.log.debug(executionContext, `${errorStr} ${this.path}`);
-
-					if (this.timeout) {
-						clearTimeout(this.timeout);
+					if (cmd.killed) {
+						reject(new ExternalProcessExceptionKilled());
+					} else {
+						if (this.timeout) {
+							clearTimeout(this.timeout);
+						}
+						reject(new ExternalProcessExceptionUnexpectedExitCode(`Exit with unexpected code ${code}`));
 					}
-					reject(errorStr);
 				}
 			});
 
@@ -74,14 +81,20 @@ export class ExternalProcess {
 
 			this.timeout = setTimeout(() => {
 				cmd.kill();
+				reject(new ExternalProcessExceptionTimeout(`External process ${this.path} timeout`));
 			}, this.timeoutMs);
 
-			if (!cmd.stdin) {
-				cmd.kill();
-			} else {
-				cmd.stdin.write(msgBodyStr);
-				cmd.stdin.end();
-			}
+			cmd.stdin.write(msgBodyStr);
+			cmd.stdin.end();
 		});
+	}
+}
+
+
+function runSpawn(path: string): ChildProcessWithoutNullStreams | ExternalProcessExceptionCannotSpawn {
+	try {
+		return spawn(path);
+	} catch (e) {
+		return new ExternalProcessExceptionCannotSpawn(`Faild spawn ${path}`, FException.wrapIfNeeded(e));
 	}
 }
