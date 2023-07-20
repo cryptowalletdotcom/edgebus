@@ -1,4 +1,4 @@
-import { FEnsure, FEnsureException, FException, FExecutionContext, FLogger } from "@freemework/common";
+import { FEnsure, FEnsureException, FException, FExecutionContext } from "@freemework/common";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import { Message } from "../../model";
 import { ExternalProcessException, ExternalProcessExceptionCannotSpawn, ExternalProcessExceptionKilled, ExternalProcessExceptionParse, ExternalProcessExceptionTimeout, ExternalProcessExceptionUnexpectedExitCode } from "./external_process_exception";
@@ -9,13 +9,11 @@ const ensure: FEnsure = FEnsure.create();
 export class ExternalProcess {
 	private readonly path: string;
 	private readonly timeoutMs: number;
-	private readonly log: FLogger;
 	private timeout: NodeJS.Timeout | null = null;
 
 	constructor(path: string, timeoutMs: number) {
 		this.path = path;
 		this.timeoutMs = timeoutMs;
-		this.log = FLogger.create(ExternalProcess.name);
 	}
 
 	public execute(

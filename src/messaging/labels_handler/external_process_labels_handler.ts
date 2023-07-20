@@ -6,7 +6,6 @@ import { ExternalProcess } from "./external_process";
 
 
 export class ExternalLabelsHandler extends LabelsHandlerBase {
-	private static readonly LABEL_HANDLERS_FOLDER = "label_handlers";
 	private readonly timeoutMs;
 	private readonly externalProcessPath: LabelHandler.ExternalProcess["externalProcessPath"];
 
@@ -25,7 +24,7 @@ export class ExternalLabelsHandler extends LabelsHandlerBase {
 	}
 
 	private getLabelHandlerFullPath(labelHandlerPath: string): string {
-		const fullPath = path.join(process.cwd(), ExternalLabelsHandler.LABEL_HANDLERS_FOLDER, labelHandlerPath);
+		const fullPath = path.join(process.cwd(), labelHandlerPath);
 		return fullPath;
 	}
 }
