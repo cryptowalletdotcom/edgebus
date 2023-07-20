@@ -100,12 +100,7 @@ export abstract class MessageBusBase extends MessageBus {
 					message.messageBody,
 					labels
 				);
-
-				// TODO Remove
-				for (const label of labels) {
-					await db.bindLabelToMessage(executionContext, messageInstance, label);
-				}
-
+				
 				await this.onPublish(executionContext, ingress, topic, messageInstance);
 			}
 		);
@@ -174,4 +169,5 @@ export abstract class MessageBusBase extends MessageBus {
 		topic: Topic,
 		egress: Egress
 	): Promise<MessageBus.Channel>;
+	
 }

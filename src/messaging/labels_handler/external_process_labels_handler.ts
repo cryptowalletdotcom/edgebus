@@ -1,51 +1,30 @@
-import { FEnsure, FExecutionContext, FLogger } from "@freemework/common";
+import { FExecutionContext } from "@freemework/common";
 import { LabelHandler, Message } from "../../model";
 import { LabelsHandlerBase } from "./labels_handler_base";
-import { spawn } from "child_process";
 import path = require("path");
+import { ExternalProcess } from "./external_process";
 
-const ensure: FEnsure = FEnsure.create();
 
 export class ExternalLabelsHandler extends LabelsHandlerBase {
-	private static readonly LABEL_HANDLERS_FOLDER = "label_handlers"
-
+	private readonly timeoutMs;
 	private readonly externalProcessPath: LabelHandler.ExternalProcess["externalProcessPath"];
-	private readonly log: FLogger;
 
 	constructor(externalProcessPath: LabelHandler.ExternalProcess["externalProcessPath"]) {
 		super();
 		this.externalProcessPath = externalProcessPath;
-		this.log = FLogger.create(ExternalLabelsHandler.name);
+		this.timeoutMs = 15 * 1000;
 	}
 
 	public execute(
 		executionContext: FExecutionContext,
 		message: Message.Id & Message.Data
 	): Promise<Array<string>> {
-		return new Promise((resolve, reject) => {
-			const cmd = spawn(this.getLabelHandlerFullPath(this.externalProcessPath));
-
-			cmd.stderr.on('data', (data) => {
-				this.log.error(executionContext, data.toString());
-			});
-
-			cmd.stdout.on('data', (data) => {
-				const result = JSON.parse(data.toString());
-				resolve(ensure.array(result));
-			});
-
-			cmd.once('error', (error) => {
-				this.log.error(executionContext, error.toString());
-				reject(error);
-			});
-
-			cmd.stdin?.write(JSON.stringify(message));
-			cmd.stdin?.end();
-		});
+		const newExternalProcess = new ExternalProcess(this.getLabelHandlerFullPath(this.externalProcessPath), this.timeoutMs);
+		return newExternalProcess.execute(executionContext, message);
 	}
 
-	private getLabelHandlerFullPath(labelHandlerPath: string) {
-		const fullPath = path.join(process.cwd(), ExternalLabelsHandler.LABEL_HANDLERS_FOLDER, labelHandlerPath);
+	private getLabelHandlerFullPath(labelHandlerPath: string): string {
+		const fullPath = path.join(process.cwd(), labelHandlerPath);
 		return fullPath;
 	}
 }
